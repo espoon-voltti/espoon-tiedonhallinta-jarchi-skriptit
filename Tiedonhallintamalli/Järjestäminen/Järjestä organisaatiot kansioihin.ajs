@@ -1,0 +1,47 @@
+﻿/*
+ * Järjestää Espoon tiedonhallintamalliin kuuluvat organisaatiot tietyn logiikan mukaisesti Archi-mallin 
+ * kansion Business > Tiedonhallintamalli > Organisaatiot alikansioiksi.
+ */
+
+console.log("Järjestetään organisaatiot kansioihin...");
+
+business = $("folder.Business").first();
+tiedonhallintamalli = $("#"+business.id).find("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalli == null) {
+  tiedonhallintamalli = business.createFolder("Tiedonhallintamalli");
+}
+organisaatiot = $("#"+tiedonhallintamalli.id).find("folder.Organisaatiot").first();
+if (organisaatiot == null) {
+  organisaatiot = tiedonhallintamalli.createFolder("Organisaatiot");
+}
+
+ 
+$("business-actor").each(function (element) {
+  if (!element.prop("_Tiedonhallintamalli")) {
+    console.log("Ei osa tiedonhallintamallia: " + element);
+    return;
+  }
+  
+  toimiala = element.prop("Toimiala");
+  if (!toimiala) toimiala = "Muut";
+  sisainen = element.prop("Sisäinen/ulkoinen");
+
+  kansio = $("#" + element.id).parent();
+  if (kansio.name != toimiala && kansio.name != "Ulkoiset") {
+    nextname = sisainen == "ulkoinen" ? "Ulkoiset" : "Espoon kaupunki";
+    nextfolder = $("#"+organisaatiot.id).find("folder."+nextname).first();
+    if (nextfolder == null) {
+      nextfolder = organisaatiot.createFolder(nextname);
+    }
+    if (sisainen != "ulkoinen") {
+      toimfolder = $("#"+nextfolder.id).find("folder."+toimiala).first();
+      if (toimfolder == null) {
+        toimfolder = nextfolder.createFolder(toimiala);
+      }
+      nextfolder = toimfolder;
+    }
+    nextfolder.add(element);
+  }
+});
+
+console.log("... organisaatiot järjestetty kansioihin.");

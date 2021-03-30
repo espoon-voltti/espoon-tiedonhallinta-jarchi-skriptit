@@ -1,0 +1,40 @@
+﻿/*
+ * Etsii ja poistaa (kysyy ensin) 360-näkymät, joiden kuvaamaa kohdetta ei enää mallissa ole.
+ * Jos on esim. korvannut kohteita toisilla tai poistanut elementtejä niin tällä voi varmistaa,
+ * ettei jää roikkumaan vanhentuneita 360-näkymiä.
+ * Tiettyä kohdetta kuvaava 360-näkymä tunnistetaan näkymän _KuvattavaKohde-ominaisuuskentän arvosta.
+ */
+
+Luo 360-näkymän Espoon tiedonhallintamalliin kuuluvalle prosessille. Näkymä luodaan 
+ * Views > Tiedonhallintamalli > Prosessihierarkia kansion alikansioon.
+ * Luo näkymän kaikille Archin käyttöliittymässä valituille prosesseille. Valittuna voi myös olla
+ * prosessien sijaan niiden 360-näkymät, jotka tällöin korvataan. Valittuna voi olla myös kansioita, 
+ * jolloin näiden alla olevat prosessit tai prosessien 360-näkymät luodaan. Kysyy ennen olemassa olevien
+ * näkymien korvaamista uusilla.
+ */
+ 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+console.log("> Haetaan orpoja näkymiä...");
+duplikaattitutka = {};
+$("view").each(function (view) {
+  if (!view.prop("_KuvattavaKohde")) return;
+  if (duplikaattitutka[view.prop("_KuvattavaKohde")]) {
+    kohde = $("#"+view.prop("_KuvattavaKohde")).first();
+    herja = "Kuvattavalle kohteelle " + (kohde ? kohde.name : "(EI LÖYDY)") + " on useita näkymiä, mm. " + view.name;
+    console.error(herja);
+    if (window.confirm(herja + " Poistetaanko näkymä " + view.name + "?")) {
+      view.delete();
+      return;
+    }
+  } else duplikaattitutka[view.prop("_KuvattavaKohde")] = view;
+  if (!$("#"+view.prop("_KuvattavaKohde")).size()) {
+    // löytyi orpo näkymä, jonka kuvattavaa kohdetta ei enää ole
+    herja = "- Näkymän " + view.name + " kuvattavaa kohdetta (" + view.prop("_KuvattavaKohde") + ") ei enää löydy.";
+    console.log(herja);
+    if (window.confirm(herja + " Poistetaanko?")) view.delete();
+  }
+});
+console.log("> Valmis");
+console.log();
+
