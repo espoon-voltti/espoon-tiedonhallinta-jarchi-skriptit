@@ -23,9 +23,19 @@ Skriptini käyttävät paria ulkopuolista kirjastoa, joiden oletetaan löytyvän
 
 Näiden osalta ei tarvitse muuta kuin ladata kirjastotiedostot **~lib**-hakemistoon.
 
+Käytämme myös coArchi-liitännäistä, jolla malleihin tehdyt muokkaukset voidaan jakaa useamman
+käyttäjän kesken. Muutokset päivitetään meillä Github-repositorioon. Github oli jo aiemmin
+Espoolla käytössä avoimen lähdekoodin kehitystä varten. coArchi-pluginin voi ladata ilmaiseksi:
+https://www.archimatetool.com/plugins/#coArchi
+
+Käyttö vaatii jonkin verran ohjelmointi- tai raportointitaustaa, mutta minusta tässä oli kuitenkin aika 
+matala oppimiskäyrä, eikä käyttöni vaatinut mitään sen isompia kehitysympäristöjen asennuksia työasemalle.
+Vain itse Archi-sovelluksen asennukseen työasemalleni tarvitsin käyttöpalveluidemme apua 
+(järjestelmävalvojan oikeudet).
+
 ## Muuta huomioitavaa
 
-- Useimmat skriptit toimivat Archissa valitulle kohteelle. Valinta voi olla joka vasemman laidan 
+- Useimmat näistä skripteistä toimivat Archissa valitulle kohteelle. Valinta voi olla joka vasemman laidan 
 navigaatiossa (useamman kohteen voi valita yhtä aikaa shift- tai ctrl-näppäimillä) **tai** avoinan 
 olevassa kaaviossa, mutta ei molemmissa yhtä aikaa.
 
@@ -37,5 +47,13 @@ olevassa kaaviossa, mutta ei molemmissa yhtä aikaa.
 valitsemansa haluamansa ylätason. Esim. meidän yli 500 prosessin kaikkien 360-näkymien generoimisessa 
 kestää koneellani sen verran pitkään, että kahvit ehtii hyvin keittää ja juoda. Onneksi tätä ei 
 tarvitse tehdä joka päivä.
+
+## Mistä lisäohjetta skriptien muokkaamiseen?
+
+- JArchi-skriptien opastus löytyy täältä: https://github.com/archimatetool/archi-scripting-plugin/wiki/jArchi-API-Overview
+- Ohjelmointikielenä on eräs JavaScript-murre, johon olen hankkinut vinkkejä tästä yleisestä JavaScript tutoriaalista:
+https://www.w3schools.com/js/DEFAULT.asp (ihan kaikki asiat ei toimi jArchissa, kokeilemalla selviää...)
+
+
 
 
