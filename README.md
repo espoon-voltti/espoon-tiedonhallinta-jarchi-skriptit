@@ -1,7 +1,9 @@
 # Espoon tiedonhallintamallin ylläpitoon Archi-työvälineessä käytettyjä JArchi-skriptejä
 
-Julkaistu hyödynnä sellaisena kuin ovat -periaatteella. Emme vastaa soveltumisesta mihinkään 
-tiettyyn käyttötarkoitukseen. Saa käyttää ja muokata sekä edelleen julkaista vapaasti.
+Julkaistu avoimena lähdekoodina hyödynnä sellaisena kuin ovat -periaatteella. Emme vastaa
+soveltumisesta mihinkään tiettyyn käyttötarkoitukseen emmekä tarjoa tukea. Saa käyttää 
+ja muokata sekä edelleen julkaista vapaasti. Tekijän tai Espoon kaupungin nimeen ei saa
+viitata edelleen julkaistessa.
 
 ## Mitä tarvitset
 
@@ -44,7 +46,7 @@ olevassa kaaviossa, mutta ei molemmissa yhtä aikaa.
 - Joidenkin skriptien suoritus kestää, joten kannattaa olla tehokas kone ja/tai kärsivällisyyttä.
 
 - Osan skripteistä, esim. näkymien luonnit, voi suorittaa kokonaisille kansiohierarkioille 
-valitsemansa haluamansa ylätason. Esim. meidän yli 500 prosessin kaikkien 360-näkymien generoimisessa 
+valitsemalla haluamansa ylätason. Esim. meidän yli 500 prosessin kaikkien 360-näkymien generoimisessa 
 kestää koneellani sen verran pitkään, että kahvit ehtii hyvin keittää ja juoda. Onneksi tätä ei 
 tarvitse tehdä joka päivä.
 
