@@ -2,8 +2,7 @@
 
 Julkaistu avoimena lähdekoodina hyödynnä sellaisena kuin ovat -periaatteella. Emme vastaa
 soveltumisesta mihinkään tiettyyn käyttötarkoitukseen emmekä tarjoa tukea. Saa käyttää 
-ja muokata sekä edelleen julkaista vapaasti. Tekijän tai Espoon kaupungin nimeen ei saa
-viitata edelleen julkaistessa.
+ja muokata sekä edelleen julkaista vapaasti.
 
 ## Mitä tarvitset
 
