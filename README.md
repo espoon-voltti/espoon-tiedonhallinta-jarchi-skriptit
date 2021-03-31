@@ -38,7 +38,7 @@ Vain itse Archi-sovelluksen asennukseen työasemalleni tarvitsin käyttöpalvelu
 
 - JArchi-skriptien opastus löytyy täältä: https://github.com/archimatetool/archi-scripting-plugin/wiki/jArchi-API-Overview
 - JArchi on ohjelmointikielenä eräs JavaScript-murre, johon olen hankkinut vinkkejä tästä yleisestä JavaScript tutoriaalista:
-https://www.w3schools.com/js/DEFAULT.asp (ihan kaikki asiat ei toimi jArchissa, kokeilemalla selviää...)
+https://www.w3schools.com/js/DEFAULT.asp 
 
 ## Muuta huomioitavaa
 
