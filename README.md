@@ -34,11 +34,17 @@ matala oppimiskäyrä, eikä käyttöni vaatinut mitään sen isompia kehitysymp
 Vain itse Archi-sovelluksen asennukseen työasemalleni tarvitsin käyttöpalveluidemme apua 
 (järjestelmävalvojan oikeudet).
 
+## Mistä lisäohjetta skriptien muokkaamiseen?
+
+- JArchi-skriptien opastus löytyy täältä: https://github.com/archimatetool/archi-scripting-plugin/wiki/jArchi-API-Overview
+- JArchi on ohjelmointikielenä eräs JavaScript-murre, johon olen hankkinut vinkkejä tästä yleisestä JavaScript tutoriaalista:
+https://www.w3schools.com/js/DEFAULT.asp (ihan kaikki asiat ei toimi jArchissa, kokeilemalla selviää...)
+
 ## Muuta huomioitavaa
 
-- Useimmat näistä skripteistä toimivat Archissa valitulle kohteelle. Valinta voi olla joka vasemman laidan 
-navigaatiossa (useamman kohteen voi valita yhtä aikaa shift- tai ctrl-näppäimillä) **tai** avoinan 
-olevassa kaaviossa, mutta ei molemmissa yhtä aikaa.
+- Useimmat näistä skripteistä toimivat Archissa käyttöliittymässä valitulle kohteelle. Valinta voi olla joka 
+vasemman laidan navigaatiossa (useamman kohteen voi valita yhtä aikaa shift- tai ctrl-näppäimillä) **tai** 
+avoinna olevassa kaaviossa, mutta ei molemmissa yhtä aikaa.
 
 - Skriptin tekemät muutokset voi aina perua Undo-toiminnolla.
 
@@ -49,12 +55,18 @@ valitsemalla haluamansa ylätason. Esim. meidän yli 500 prosessin kaikkien 360-
 kestää koneellani sen verran pitkään, että kahvit ehtii hyvin keittää ja juoda. Onneksi tätä ei 
 tarvitse tehdä joka päivä.
 
-## Mistä lisäohjetta skriptien muokkaamiseen?
+- Tiedonhallintamalliin kuuluvien elementtien tietorakenne on tietynlainen, eikä siitä voi poiketa ilman,
+että skriptejä pitää myös muuttaa. Tietomalli on tarkoitus jossain vaiheessa dokumentoida tarkemmin. Tässä
+vaiheessa todettakoon, että tiedonhallintamalliin kuuluvat elementit (Prosessit = business-process, 
+Tietovarannot = product, Tietojärjestelmät = application-component, Organisaatioyksiköt = business-actor)
+on merkitty siten, että niillä on ominaisuuskentän \_Tiedonhallintamalli arvona "1". Jos tämä arvo puuttuu,
+skriptit ohittavat ko. elementin. Toisin sanoen, tiedonhallintamallin voisi ottaa pohjaksi ja jatkaa
+tavoitetilan piirtämiseen, jollloin tavoitetilan kohteet erottuvat tiedonhallintamallissa olevista
+(tätä emme ole juurikaan vielä testanneet käytännössä).
 
-- JArchi-skriptien opastus löytyy täältä: https://github.com/archimatetool/archi-scripting-plugin/wiki/jArchi-API-Overview
-- Ohjelmointikielenä on eräs JavaScript-murre, johon olen hankkinut vinkkejä tästä yleisestä JavaScript tutoriaalista:
-https://www.w3schools.com/js/DEFAULT.asp (ihan kaikki asiat ei toimi jArchissa, kokeilemalla selviää...)
-
-
-
+- Relaatioista liittymiä kuvaavat flow-relaatiot on myös merkitty ominaisuuskentän \_Tiedonhallintamalli 
+arvolla "1". Muut relaatiot oletetaan olevan osa tiedonhallintamallia, jos relaation lähde- ja kohde-elementit
+kuuluvat tiedonhallintamalliin. Omistus/vastuu mallinnetaan association-relationship:illä, jonka nimi tulee
+aina olla "vastaa" (pienet kirjaimet), ja jossa lähde on Organisaatioyksikkö ja kohde on muu tiedonhallintamallin
+elementti.
 
