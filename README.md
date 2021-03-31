@@ -55,6 +55,8 @@ valitsemalla haluamansa ylätason. Esim. meidän yli 500 prosessin kaikkien 360-
 kestää koneellani sen verran pitkään, että kahvit ehtii hyvin keittää ja juoda. Onneksi tätä ei 
 tarvitse tehdä joka päivä.
 
+- Varsin hyvälaatuisen katseltavan HTML-raportin mallin sisällöstä saa luotua File > Report > HTML... toiminnolla.
+
 - Tiedonhallintamalliin kuuluvien elementtien tietorakenne on tietynlainen, eikä siitä voi poiketa ilman,
 että skriptejä pitää myös muuttaa. Tietomalli on tarkoitus jossain vaiheessa dokumentoida tarkemmin. Tässä
 vaiheessa todettakoon, että tiedonhallintamalliin kuuluvat elementit (Prosessit = business-process, 
