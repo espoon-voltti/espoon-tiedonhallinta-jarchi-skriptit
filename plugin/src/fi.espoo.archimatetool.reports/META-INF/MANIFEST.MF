@@ -1,0 +1,21 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Espoo HTML Reports
+Bundle-SymbolicName: fi.espoo.archimatetool.reports;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Espoon kaupunki
+Bundle-Localization: plugin
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Eclipse-BundleShape: dir
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.ui,
+ com.archimatetool.editor,
+ com.archimatetool.editor.browser
+Bundle-ClassPath: fi.espoo.archimatetool.reports.jar,
+ lib/ST-4.0.8.jar,
+ lib/antlr-runtime-4.4.jar
+Bundle-Activator: fi.espoo.archimatetool.reports.EspooHtmlReportsPlugin
+Bundle-ActivationPolicy: lazy
+Export-Package: fi.espoo.archimatetool.reports,
+ fi.espoo.archimatetool.reports.html
+Automatic-Module-Name: fi.espoo.archimatetool.reports
