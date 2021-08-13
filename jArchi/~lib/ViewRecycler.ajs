@@ -1,0 +1,160 @@
+﻿/*
+ * Apufunktioita näkymien uudelleenkäyttöön (poistamisen ja uudelleenluomisen sijaan). Uudelleenkäytön
+ * hyötyjä:
+ * - näkymän tunniste (id) ei muutu
+ * - versionhallinnan muutoshistoria näyttää ehkä paremmin, mikä on oikeasti muuttunut, mikä säilynyt samana
+ */
+ 
+function clearProperties(visualObj) {
+  visualObj.documentation = null;
+  var props = visualObj.prop();
+  if (props == null) return;
+  for (var i = 0; i < props.length; i++) {
+    visualObj.removeProp(props[i]);
+  }
+}
+
+function clearAppearance(visualObj) {
+  visualObj.fillColor = null;
+  visualObj.fontColor = null;
+  visualObj.lineColor = null;
+  /**
+   * Näyttää siltä, että parempi olla sorkkimatta näitä... laitettiin vain ne, joissa dokumentaation 
+   * mukaan null on palauttaa defaultin
+  //visualObj.fontName = null;
+  visualObj.fontSize = null;
+  visualObj.fontStyle = null;
+  //visualObj.labelExpression = null;
+  visualObj.opacity = null;
+  visualObj.outlineOpacity = null;
+  //visualObj.textAlignment = null;
+  visualObj.textPosition = null;
+   **/
+}
+
+/*
+ * Kutsutaan näkymän luonnin alussa. Palauttaa objektin (viewObj) joka pitää antaa kaikissa jatkokutsuissa.
+ */
+
+function createOrRecycleArchimateView(existing, name, folder, replaceOld) {
+  if (replaceOld === undefined) replaceOld = true;
+  var viewObj = {};
+  viewObj.elems = {};
+  viewObj.rels = {};
+  viewObj.objs = {};
+  if (existing && Array.isArray(existing)) {
+    if (existing.length == 0) existing = null;
+  } else if (existing && !existing.type && existing.size() == 0) existing = null;
+  if (existing && replaceOld) {
+    if (Array.isArray(existing)) {
+      viewObj.view = existing[0];
+      for (var i = 1; i < existing.length; i++) {
+        console.log("> Poistetaan ylimääräinen näkymä " + existing[i].name);
+        existing[i].delete();
+      }
+    } else if (!existing.type) {
+      viewObj.view = existing.first();
+      for (var i = 1; i < existing.size(); i++) {
+        console.log("> Poistetaan ylimääräinen näkymä " + existing.get(i).name);
+        existing.get(i).delete();
+      }
+    } else viewObj.view = existing;
+    $("#"+viewObj.view.id).children().each(function (obj) {
+      if (obj.concept) {
+        if (obj.type.indexOf("relationship") >= 0) {
+          viewObj.rels[obj.concept.id] = obj;
+          //console.log("- Lisättiin relaatio id " + obj.concept.id);
+        } else {
+          viewObj.elems[obj.concept.id] = obj;
+          //console.log("- Lisättiin elementti id " + obj.concept.id);
+        }
+      } else {
+        if (obj.prop("_ObjektiTunniste")) {
+          viewObj.objs[obj.prop("_ObjektiTunniste")] = obj;
+        } else {
+          console.log("- poistetaan näkymäobjekti " + obj);
+          obj.delete();
+        }
+      }
+    });
+    clearProperties(viewObj.view);
+    viewObj.view.name = name;
+  } else {
+    viewObj.view = model.createArchimateView(name, folder);
+  }
+  return viewObj;
+}
+
+function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
+  var curObj = viewObj.objs[objTunniste];
+  //console.log(curObj);
+  if (curObj && curObj.type != type) {
+    curObj.delete();
+    curObj = null;
+  }
+  if (curObj) {
+    //console.log("Reusing object " + curObj);
+    curObj.bounds = { "x": x, "y": y, "width": width, "height": height};
+    clearProperties(curObj);
+    clearAppearance(curObj);
+    curObj.text = null;
+    delete viewObj.objs[objTunniste];
+  } else {
+    curObj = viewObj.view.createObject(type, x, y, width, height);
+    curObj.prop("_ObjektiTunniste", objTunniste);
+  }
+  return curObj;
+}
+
+function recycledViewAddElement(viewObj, element, x, y, width, height) {
+  //console.log("kierrätetään elementtiä id " + element.id + " ja " + element.concept);
+  var curObj = viewObj.elems[element.id];
+  if (curObj) {
+    //console.log("Reusing element " + curObj);
+    curObj.bounds = { "x": x, "y": y, "width": width, "height": height};
+    clearAppearance(curObj);
+    delete viewObj.elems[element.id];
+  } else {
+    curObj = viewObj.view.add(element, x, y, width, height);
+  }
+  return curObj;
+}
+
+function recycledViewAddRelationship(viewObj, relationship, sourceDiagramComponent, targetDiagramComponent) {
+  //console.log("kierrätetään relaatiota id " + relationship.id  + " ja " + relationship.concept );
+  if (!sourceDiagramComponent) {
+    console.error("sourceDiagramComponent not defined, " + relationship + ": " + (relationship? relationship.source + " -> " + relationship.target : "null"));
+  }
+  if (!targetDiagramComponent) {
+    console.error("targetDiagramComponent not defined, " + relationship + ": " + (relationship? relationship.source + " -> " + relationship.target : "null"));
+  }
+  var curObj = viewObj.rels[relationship.id];
+  // console.log(curObj + " " + (curObj? curObj.source + " -> " + curObj.target : "null"));
+  if (curObj && ((sourceDiagramComponent.id != curObj.source.id) || (targetDiagramComponent.id != curObj.target.id))) {
+    curObj.delete();
+    curObj = null;
+  }
+  if (curObj) {
+    //console.log("Reusing relationship " + curObj + " " + (curObj? curObj.source + " -> " + curObj.target : "null"));
+    curObj.deleteAllBendpoints();
+    curObj.labelVisible = true;  // oletus?
+    curObj.lineWidth = 1;  // oletus?
+    clearAppearance(curObj);
+    delete viewObj.rels[relationship.id];
+  } else {
+    curObj = viewObj.view.add(relationship, sourceDiagramComponent, targetDiagramComponent);
+  }
+  return curObj;
+}
+
+function recycledViewFinishRecycling(viewObj) {
+  for (var objid in viewObj.rels) {
+    viewObj.rels[objid].delete();
+  }
+  for (var objid in viewObj.elems) {
+    viewObj.elems[objid].delete();
+  }
+  for (var objid in viewObj.objs) {
+    viewObj.objs[objid].delete();
+  }
+}

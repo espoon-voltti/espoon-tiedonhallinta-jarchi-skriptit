@@ -4,7 +4,7 @@
  * ettei jää roikkumaan vanhentuneita 360-näkymiä.
  * Tiettyä kohdetta kuvaava 360-näkymä tunnistetaan näkymän _KuvattavaKohde-ominaisuuskentän arvosta.
  */
- 
+
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 console.log("> Haetaan orpoja näkymiä...");
@@ -13,10 +13,21 @@ $("view").each(function (view) {
   if (!view.prop("_KuvattavaKohde")) return;
   if (duplikaattitutka[view.prop("_KuvattavaKohde")]) {
     kohde = $("#"+view.prop("_KuvattavaKohde")).first();
-    herja = "Kuvattavalle kohteelle " + (kohde ? kohde.name : "(EI LÖYDY)") + " on useita näkymiä, mm. " + view.name;
+    aiempiview = duplikaattitutka[view.prop("_KuvattavaKohde")];
+    aiempiluotu = aiempiview.prop("_Luotu");
+    aiempidate = aiempiluotu ? Date.parse(aiempiluotu) : 0;
+    myohempiview = view;
+    myohempiluotu = myohempiview.prop("_Luotu")
+    myohempidate = myohempiluotu ? Date.parse(myohempiluotu) : 0;
+    if (aiempidate > 0 && myohempidate > 0 && myohempidate < aiempidate) {
+      myohempiview = aiempiview;  // vaihdetaan päittäin jos oli väärä järjestys
+      aiempiview = view;
+    }
+    herja = "Kuvattavalle kohteelle " + (kohde ? kohde.name : "(EI LÖYDY)") + " on useita näkymiä, mm. " + aiempiview.name 
+      + " (" + aiempiluotu + ") ja " + myohempiview.name + " (" + myohempiluotu + ")";
     console.error(herja);
-    if (window.confirm(herja + " Poistetaanko näkymä " + view.name + "?")) {
-      view.delete();
+    if (window.confirm(herja + " Poistetaanko näkymä " + aiempiview.name + " (" + aiempiluotu + ")?")) {
+      aiempiview.delete();
       return;
     }
   } else duplikaattitutka[view.prop("_KuvattavaKohde")] = view;

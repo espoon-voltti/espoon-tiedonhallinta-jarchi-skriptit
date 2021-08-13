@@ -5,9 +5,11 @@
 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
 
-
-console.log(">>> Tietojärjestelmäkarttojen luonti " + (new Date()).format("isoDateTime"));
+var aikaleima = (new Date()).format("isoDateTime");
+console.show();
+console.log(">>> Tietojärjestelmäkarttojen luonti " + aikaleima);
 if (!window.confirm("Tämä poistaa ja luo uudestaan kaikki tietojärjestelmäkartat. Jatketaanko?")) exit();
 
 views = $("folder.Views").first();
@@ -50,7 +52,7 @@ jarjestelmat = $("application-component").filter(fth);
 jarjestelmat.sort(namecompare);
 jarjestelmat.each(function (jarj) {
   jarj.prop("_Prosesseja", $("#"+jarj.id).outRels("serving-relationship").targetEnds("business-process").filter(fth).size());
-  jarj.prop("_Liittymiä", $("#"+jarj.id).rels("flow-relationship").filter(fth).targetEnds("application-component").size());
+  jarj.prop("_Liittymiä", $("#"+jarj.id).rels("flow-relationship").filter(fth).targetEnds("application-component").size()); 
   if (jarj.prop("Järjestelmäsalkku ID")) {  // tarkistetaan mahdolliset salkku-duplikaatit samalla...
     if (jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")]) {
       herja = "Löytyi useita järjestelmiä samalla Järjestelmäsalkku ID:llä, mm. " + jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")].name + " ja " + jarj.name + ". Tämä olisi syytä korjata manuaalisesti.";
@@ -71,17 +73,25 @@ jarjestelmat.each(function (jarj) {
   }
 });
 
-$("#"+tietojarjestelmatFolder.id).find("view").each(function (view) {
-  if (view.prop("_Järjestelmäkartta")) {
-    console.log("> Poistetaan näkymä " + view.name);
-    view.delete();
-  }
-});
+//$("#"+tietojarjestelmatFolder.id).find("view").each(function (view) {
+//  if (view.prop("_Järjestelmäkartta")) {
+//    console.log("> Poistetaan näkymä " + view.name);
+//    view.delete();
+//  }
+//});
 
 for (toimiala in toimialaMap) {
-  console.log("> Luodaan järjestelmäkarttaa " + toimiala);
-  nakyma = model.createArchimateView("Järjestelmäkartta " + toimiala, tietojarjestelmatFolder);
-  nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+  var toimialanimi = toimialanNimi(toimiala) ? toimialanNimi(toimiala) : toimiala;
+  console.log("> Luodaan järjestelmäkarttaa " + toimiala + " (" + toimialanimi + ")");
+  var existing = [];
+  $("#"+tietojarjestelmatFolder.id).find("view").each(function (view) {
+    if (view.prop("_Järjestelmäkartta") == toimiala) {
+      existing.push(view);
+    }
+  });
+  var viewObj = createOrRecycleArchimateView(existing, "Järjestelmäkartta " + toimialanimi, tietojarjestelmatFolder);
+  var nakyma = viewObj.view;
+  nakyma.prop("_Luotu", aikaleima);
   nakyma.prop("_Tiedonhallintamalli", "1");
   nakyma.prop("_Järjestelmäkartta", toimiala);
   
@@ -91,25 +101,24 @@ for (toimiala in toimialaMap) {
   groupleveys = 2*reunusx + kuvioitamaxrivi * (kuvionleveys + kuviovalix) - kuviovalix;
 
   juoksevay = reunusy;
-  note = nakyma.createObject("diagram-model-note", reunusx + Math.round((groupleveys - noteleveys) / 2), juoksevay, noteleveys, notekorkeus);
+  note = createRecycledObject(viewObj, "note-1", "diagram-model-note", reunusx + Math.round((groupleveys - noteleveys) / 2), juoksevay, noteleveys, notekorkeus);
   note.setText(nakyma.name);
   note.fontStyle = "bold";
   note.fontSize = 12;
   note.textAlignment = TEXT_ALIGNMENT.CENTER;
   note.textPosition = TEXT_POSITION.CENTER;
   juoksevay += notekorkeus + kuviovaliy;
-  
 
   for (org in toimialaMap[toimiala]) {
     jarjestelmat = toimialaMap[toimiala][org];
     riveja = Math.ceil(jarjestelmat.length / kuvioitamaxrivi);
-    group = nakyma.createObject("diagram-model-group", reunusx, juoksevay, groupleveys, grouptopy + riveja * (kuvionkorkeus + kuviovaliy));
+    group = createRecycledObject(viewObj, "group-" + org, "diagram-model-group", reunusx, juoksevay, groupleveys, grouptopy + riveja * (kuvionkorkeus + kuviovaliy));
     group.name = org;
     juoksevay += grouptopy;
     juoksevax = 2 * reunusx;
     xcnt = 1;
     for (i = 0; i < jarjestelmat.length; i++) {
-      nakyma.add(jarjestelmat[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+      recycledViewAddElement(viewObj, jarjestelmat[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
       juoksevax += kuvionleveys + kuviovalix;
       xcnt++;
       if (xcnt > kuvioitamaxrivi) {
@@ -122,6 +131,7 @@ for (toimiala in toimialaMap) {
     juoksevay += 2 * kuviovaliy;
   }
 
+  recycledViewFinishRecycling(viewObj);
   varitettavaNakyma = nakyma;
   load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 }

@@ -2,26 +2,63 @@
  * Tämä skripti asettaa Espoon tiedonhallintamalliin kuuluvien elementtien _Omistaja-kentän arvoksi 
  * vastaa-relaation mukaisen omistajan nimen. 
  */
- 
+
+"use strict"; 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
-console.log(">>> Aloitetaan omistajien ym. asettaminen... " + (new Date()).toISOString());
-valinta = $("empty");
-valittavatElementit = $("empty");
+console.show();
+console.log(">>> Aloitetaan omistajien ym. asettaminen... ");
+
+var kohdeOmistaja = null;
+
+var valinta = $("empty");
 $(selection).each(function(element) {  // explode relevant folder contents
+  if (element.type == "business-actor" && fth(element)) {
+    if (kohdeOmistaja) {
+      console.error("Valittuna useampi organisaatio. Vain yksi organisaatio voidaan asettaa omistajaksi muille valituille kohteille. Ei voida jatkaa.");
+      exit();
+    }
+    kohdeOmistaja = element;
+    return;
+  }
   if (element.type == "folder") {
-    valittavatElementit.add($("#"+element.id).find("element"));
+    valinta.add($("#"+element.id).find("element"));
   } else {
-    valittavatElementit.add($("#"+element.id));
+    valinta.add($("#"+element.id));
   }
 });
 
-valittavatElementit.each(function(element) {
-  if (element.prop("_Tiedonhallintamalli") != 1) {
-    return;
+if (kohdeOmistaja) {
+  if (!window.confirm("Ollaan asettamassa " + valinta.size() + " kohteelle omistajaksi " + kohdeOmistaja.name + ". Jatketaanko?")) {
+    console.log("> Keskeytetty.");
+    exit();
   }
+  valinta.each(function(element) {
+    if (!fth(element)) {
+      console.log("- ohitetaan tiedonhallintamalliin kuulumaton kohde " + element);
+      return;
+    }
+    element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+    $("#"+element.id).inRels("association-relationship.vastaa").each(function (rel) {
+      if (rel.source.type != "business-actor" || !fth(rel.source)) {
+        console.log("- ei kuulu tiedonhallintamalliin: " + rel.source);
+        return;
+      }
+      console.log("- poistetaan kohteen " + element + " aiempi omistaja " + rel.source);
+      rel.delete();
+    });
+    model.createRelationship("association-relationship", "vastaa", kohdeOmistaja, element);
+    console.log("+ lisättiin kohteelle " + element + " omistajaksi " + kohdeOmistaja);
+  });
+}
 
-  omistaja = $("#"+element.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").first();
+console.log("> Päivitetään valittujen kohteiden _Omistaja-ominaisuus...");
+
+valinta.each(function(element) {
+  if (!fth(element)) return;
+  element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää  
+
+  var omistaja = $("#"+element.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").first();
   if (omistaja) element.prop("_Omistaja", omistaja.name);
 });
 

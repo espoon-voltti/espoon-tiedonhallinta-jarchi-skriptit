@@ -1,0 +1,83 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+function merkitseYlaprosessit(pros) {
+  var kpl = 0;
+  $("#"+pros.id).outRels("specialization-relationship").targetEnds("business-process").filter(fth).each(function (ylapros) {
+    if (!ylapros.prop("_Merkintä")) {
+      ylapros.prop("_Merkintä", "4");
+      kpl++;
+    }
+    kpl += merkitseYlaprosessit(ylapros);
+  });
+  return kpl;
+}
+
+console.show();
+if (!window.confirm("Merkintätoimintoa on tarkoitus käyttää vain tiedonhallintamalllin kopioon, ei itse tiedonhallintamalliin. Jatketaanko?")) exit();
+
+var valinta = $("empty");
+$(selection).each(function(element) {  // explode relevant folder contents
+  if (element.type == "folder") {
+    if ($("#"+element.id).parents().filter(function (fol) { return fol.name == "Views"; }).size() > 0) {
+      valinta.add($("#"+element.id).find("view"));
+    } else {
+      valinta.add($("#"+element.id).find("element"));
+    }
+  } else {
+    valinta.add($("#"+element.id));
+  }
+});
+
+console.log("> Merkitään valitut kohteet (" + valinta.size() + " kpl)");
+
+var kpl = 0;
+$("element").filter(fthHaving({"_Merkintä": null}, {"_Merkintä": "1"})).each(function (elem) {
+  elem.removeProp("_Merkintä");
+  kpl++;
+});
+console.log("> Poistettiin olemassa olevat muut kuin 1 merkinnät (" + kpl + " kpl)");
+
+kpl = 0;
+valinta.each(function(element) {
+  element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+  if (element.type == "archimate-diagram-model") {
+    if (element.prop("_KuvattavaKohde")) {  // jos valittuna on esim. kaavio, joka kuvaa tiettyä prosessia, oletetaan käyttäjän tarkoittavan että haluaa kuvata ko. prosessin
+      element = $("#"+element.prop("_KuvattavaKohde")).first();
+    } else return;
+  }
+  element.prop("_Merkintä", "1");
+  kpl++;
+});
+console.log("> Merkittiin 1 merkinnällä " + kpl + " kpl kohdetta");
+
+kpl = 0;
+$("business-process").filter(fthHaving({"_Merkintä": "1"})).
+    inRels("serving-relationship").sourceEnds("application-component").each(function (jarj) {
+  jarj.prop("_Merkintä", "2");
+  kpl++;
+});
+console.log("> Merkittiin 2 merkinnällä " + kpl + " kpl merkittyjen prosessien hyödyntämää tietojärjestelmää");
+
+kpl = 0;
+$("element").filter(fthHaving({"_Merkintä": null})).each(function (elem1) {
+  $("#"+elem1.id).rels().ends().filter(fthHaving(null, {"_Merkintä": null})).each(function (elem2) {
+    if (elem1.type == "application-component" && elem2.type == "business-process") return; // skipataan muut järjestelmän tukemat prosessit
+    elem2.prop("_Merkintä", "3");
+    kpl++;
+  });
+});
+console.log("> Merkittiin 3 merkinnällä " + kpl + " kpl edellisistä yhden relaation päässä olevia kohteita");
+
+kpl = 0;
+$("business-process").filter(fthHaving({"_Merkintä": "1"})).each(function (pros) {
+  kpl += merkitseYlaprosessit(pros);
+});
+console.log("> Merkittiin 4 merkinnällä " + kpl + " kpl aiemmin 1-merkittyjen prosessien yläprosesseja");
+
+console.log("> Valmis");
+console.log();

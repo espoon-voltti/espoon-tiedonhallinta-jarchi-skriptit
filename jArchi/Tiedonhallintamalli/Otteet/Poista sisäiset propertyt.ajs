@@ -1,0 +1,54 @@
+﻿/*
+ * New Archi Script
+ */
+
+var sailytettavat = {
+  "_KuvattavaKohde": 1,
+  "_OmaNäkymä": 1
+}
+
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+ 
+console.show();
+console.log("> Poistetaan sisäiset propertyt tiedonhallintamallin elementeiltä");
+
+if (!window.confirm("Toimintoa on tarkoitus käyttää vain tiedonhallintamalllin kopioon, ei itse tiedonhallintamalliin. Jatketaanko?")) exit();
+
+if (!window.confirm("POISTETAAN KAIKKI SISÄISET PROPERTYT (paitsi _Omistaja, _KuvattavaKohde ja _OmaNäkymä). Oletko varma ja haluatko jatkaa?")) exit();
+
+sailytetaan = window.confirm("Säilytetäänkö tietyt perusattribuutit? (jos epävarma, vastaa OK)");
+
+var kpl = 0;
+$("element").add("view").filter(fth).each(function (elem) {
+  var propertit = elem.prop();
+  for (var i = 0; i < propertit.length; i++) {
+    var nimi = propertit[i];
+    if (nimi.startsWith("_") && nimi != "_Omistaja" && (!sailytetaan || !(nimi in sailytettavat))) {
+      elem.removeProp(nimi);
+      kpl++;
+    }
+  }
+});
+console.log("> Poistettiin " + kpl + " kpl sisäisten propertien arvoja elementeiltä");
+
+var kpl = 0;
+$("relationship").filter(fth).each(function (rel) {
+  var propertit = rel.prop();
+  for (var i = 0; i < propertit.length; i++) {
+    var nimi = propertit[i];
+    if (nimi.startsWith("_") && nimi != "_Omistaja" && nimi != "_KuvattavaKohde" && nimi != "_OmaNäkymä") {
+      rel.removeProp(nimi);
+      kpl++;
+    }
+    if (nimi == "Kriittisyys") {
+      rel.removeProp(nimi);
+      kpl++;
+    }
+  }
+});
+console.log("> Poistettiin " + kpl + " kpl sisäisten propertien arvoja relaatioilta");
+
+
+console.log();
+

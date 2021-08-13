@@ -1,0 +1,71 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.show();
+console.clear();
+
+console.log("> Prosessien nimikkeiden listaus");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function kasitteleProsessit(_prosessit, _taso, _tulostusfunktio) {
+  _prosessit.each(function (_pros) {
+    _tulostusfunktio(_pros, _taso);
+    _aliprosessit = $("#"+_pros.id).inRels("specialization-relationship").sourceEnds("business-process");
+    if (_aliprosessit.size()) {
+      _aliprosessit.sort(tunnistecompare);
+      kasitteleProsessit(_aliprosessit, _taso + 1, _tulostusfunktio);
+    }
+  });
+}
+
+prosessimap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("business-process").filter(fth).each(function (pros) {
+  prosessimap[pros.id] = pros;
+});
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "prosessinimikkeet.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+csvData = [];
+maxTaso = 0;
+
+prosessit = $("folder.Business").children("folder.Tiedonhallintamalli").children("folder.Prosessihierarkia").children("business-process");
+prosessit.sort(tunnistecompare);
+kasitteleProsessit(prosessit, 1, function (pros, taso) {
+  valit = "";
+  for (i = 1; i < taso; i++) valit += "  ";
+  console.log(valit + pros.name);
+  
+  if (taso > maxTaso) maxTaso = taso;
+  datarow = {};
+  datarow["Taso " + taso] = pros.name;
+  csvData.push(datarow);
+  delete prosessimap[pros.id];
+});
+
+csvHeaders = [];
+for (i = 1; i <= maxTaso; i++) {
+  csvHeaders.push("Taso " + i);
+}
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+console.log("> Luetellaan orvot prosessit");
+for (prosid in prosessimap) {
+  console.log("- " + prosessimap[prosid].name);
+}
+
+console.log("> Valmis");
+console.log();
+

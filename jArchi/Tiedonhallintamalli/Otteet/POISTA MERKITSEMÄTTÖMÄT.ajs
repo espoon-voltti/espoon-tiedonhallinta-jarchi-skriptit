@@ -1,0 +1,62 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+ 
+console.show();
+console.log("> POISTETAAN MERKITSEMÄTTÖMÄT KOHTEET");
+
+function poistaTyhjatKansiot(folder) {
+  var kpl = 0;
+  $("#"+folder.id).children("folder").each(function (fld) {
+    kpl += poistaTyhjatKansiot(fld);
+  });
+  if ($("#"+folder.id).children().size() == 0) {
+    folder.delete();
+    kpl++;
+  }
+  return kpl;
+}
+
+if (!window.confirm("Merkintätoimintoa on tarkoitus käyttää vain tiedonhallintamalllin kopioon, ei itse tiedonhallintamalliin. Jatketaanko?")) exit();
+
+if (!window.confirm("POISTETAAN KAIKKI MUUT PAITSI MERKITYT ELEMENTIT JA MUUT PAITSI 1- JA 2-MERKITTYJÄ ELEMENTTEJÄ KUVAAVIA NÄKYMÄT. Oletko varma ja haluatko jatkaa?")) exit();
+
+console.log("> Poistetaan näkymiä...");
+var kpl = 0;
+$("view").each(function (view) {
+  if (view.prop("_KuvattavaKohde")) {  // jos valittuna on esim. kaavio, joka kuvaa tiettyä prosessia, oletetaan käyttäjän tarkoittavan että haluaa kuvata ko. prosessin
+      var element = $("#"+view.prop("_KuvattavaKohde")).first();
+      if (!element || (element.prop("_Merkintä") != "1" && element.prop("_Merkintä") != "2")) {
+        view.delete();
+        kpl++;
+      }
+  } else {
+    if (view.name != "Default View") {
+      view.delete();
+      kpl++;
+    }
+  }
+});
+console.log("> Poistettiin " + kpl + " kpl merkitsemätöntä näkymää");
+
+console.log("> Poistetaan elementtejä...");
+kpl = 0;
+$("element").each(function (elem) {
+  if (fth(elem) && (elem.type == "business-actor" || elem.prop("_Merkintä"))) return;
+  elem.delete();
+  kpl++;
+});
+console.log("> Poistettiin " + kpl + " kpl merkitsemätöntä elementtiä");
+
+console.log("> Poistetaan kansioita...");
+kpl = poistaTyhjatKansiot($("folder.Business").first());
+kpl += poistaTyhjatKansiot($("folder.Application").first());
+kpl += poistaTyhjatKansiot($("folder.Views").first());
+
+console.log("> Poistettiin " + kpl + " kpl kansioita, jotka olivat tyhjiä");
+
+console.log("> Valmis");
+console.log();

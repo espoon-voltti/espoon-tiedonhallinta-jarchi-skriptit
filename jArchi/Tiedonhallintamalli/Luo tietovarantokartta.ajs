@@ -1,0 +1,118 @@
+﻿/*
+ * New Archi Script
+ */
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+
+console.show();
+console.log(">>> Tietovarantokartan luonti...");
+if (!window.confirm("Tämä poistaa ja luo uudestaan tietovarantokartan. Jatketaanko?")) exit();
+
+var views = $("folder.Views").first();
+var tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalliFolder == null) {
+  tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
+}
+var tietovarannotFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tietovarannot").first();
+if (tietovarannotFolder == null) {
+  tietovarannotFolder = tiedonhallintamalliFolder.createFolder("Tietovarannot");
+}
+
+var toimialaMap = {};
+var varantoMap = {}
+
+var relaatiot = $("business-actor").filter(fth).outRels(".vastaa").filter(function (rel) {
+  var ratkaisu = rel.target.type == "product" && fthHaving({"_Tietovaranto": "1"})(rel.target);
+  return ratkaisu;
+});
+relaatiot.sort(function (left, right) { var orgcmp = namecompare(left.source, right.source); return orgcmp ? orgcmp : namecompare(left.target, right.target); });
+relaatiot.each(function (rel) {
+  var org = rel.source;
+  var varanto = rel.target;
+  var toimiala = "Muut";
+  var toimialaOrg;
+  var sortorder = 980;
+  if (org.prop("Toimiala")) {
+    toimiala = org.prop("Toimiala");
+    toimialaOrg = toimialaOrganisaatio(toimiala);
+    sortorder = toimialaOrg.prop("_SortOrder");
+  }
+  if (org.prop("Sisäinen/ulkoinen") == "ulkoinen") {
+    toimiala = "Ulkoiset";
+    sortorder = 990;
+  }
+  if (!toimialaMap[toimiala]) {
+    toimialaMap[toimiala] = {};
+    toimialaMap[toimiala].varannot = [];
+    toimialaMap[toimiala].sortorder = sortorder;
+  }
+  toimialaMap[toimiala].varannot.push(varanto);
+  varantoMap[varanto.id] = varanto;
+});
+
+var existing = [];
+$("#"+tietovarannotFolder.id).find("view").each(function (view) {
+  if (view.name == "Tietovarantokartta") {
+    existing.push(view);
+  }
+});
+
+var viewObj = createOrRecycleArchimateView(existing, "Tietovarantokartta", tietovarannotFolder);
+var nakyma = viewObj.view;
+nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+nakyma.prop("_Tiedonhallintamalli", "1");
+  
+var notekorkeus = 50; // oletuksesta poikkeava
+var kuvioitamaxrivi = Math.floor((kokoleveys - 4*reunusx - + kuviovalix) / (kuvionleveys+kuviovalix)); // oletuksesta poikkeava
+var grouptopy = 50;
+var groupleveys = 2*reunusx + kuvioitamaxrivi * (kuvionleveys + kuviovalix) - kuviovalix;
+
+var juoksevay = reunusy;
+var note = createRecycledObject(viewObj, "note-1", "diagram-model-note", reunusx + Math.round((groupleveys - noteleveys) / 2), juoksevay, noteleveys, notekorkeus);
+note.setText("Tietovarannot");
+note.fontStyle = "bold";
+note.fontSize = 12;
+note.textAlignment = TEXT_ALIGNMENT.CENTER;
+note.textPosition = TEXT_POSITION.CENTER;
+juoksevay += notekorkeus + kuviovaliy;
+
+var toimialalista = [];
+for (var toimiala in toimialaMap) toimialalista.push(toimiala);
+toimialalista.sort(function (left, right) { 
+  if (toimialaMap[left].sortorder > toimialaMap[right].sortorder) return 1;
+  if (toimialaMap[left].sortorder < toimialaMap[right].sortorder) return -1;
+  return 0;
+});
+
+for (var h = 0; h < toimialalista.length; h++) {
+  var toimiala = toimialalista[h];
+  var varannot = toimialaMap[toimiala].varannot;
+  varannot.sort();
+  var riveja = Math.ceil(varannot.length / kuvioitamaxrivi);
+  var group = createRecycledObject(viewObj, toimiala, "diagram-model-group", reunusx, juoksevay, groupleveys, grouptopy + riveja * (kuvionkorkeus + kuviovaliy));
+  group.name = toimialanNimi(toimiala) ? toimialanNimi(toimiala) : toimiala;
+  juoksevay += grouptopy;
+  var juoksevax = 2 * reunusx;
+  var xcnt = 1;
+  for (var i = 0; i < varannot.length; i++) {
+    recycledViewAddElement(viewObj, varannot[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevax += kuvionleveys + kuviovalix;
+    xcnt++;
+    if (xcnt > kuvioitamaxrivi) {
+      xcnt = 1;
+      juoksevax = 2 * reunusx;
+      juoksevay += kuvionkorkeus + kuviovaliy;
+    }
+  }
+  if (xcnt > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  juoksevay += 2 * kuviovaliy;
+}
+
+recycledViewFinishRecycling(viewObj);
+varitettavaNakyma = nakyma;
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+
+console.log("<<<");
+console.log("");

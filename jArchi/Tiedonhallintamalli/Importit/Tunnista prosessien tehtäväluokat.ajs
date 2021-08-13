@@ -1,0 +1,67 @@
+﻿/*
+ * Käytetty kertaluontoisesti asettamaan prosessien ja tehtäväluokkien yhteydet. 
+ * Tieto tuli prosesseihin vapaatekstinä prosessien keräys excelistä yksiköiltä.
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
+console.clear();
+console.log("> Tunnista prosessien tehtäväluokat");
+
+var tehtavaluokkaMap = {};
+$("business-function").filter(fthHaving({"Tunniste": null})).each(function (tlelem) {
+  tehtavaluokkaMap[tlelem.prop("Tunniste")] = tlelem;
+});
+
+$("business-process").filter(fth).each(function (pros) {
+  var tehtluokkastr = pros.prop("Asiakirjahallinnon tehtäväluokat");
+  if (!tehtluokkastr) return;
+
+  var matchit = tehtluokkastr.match(/\d\d(\.\d\d)+/g);
+/*  var teksti = "";
+  if (matchit) {
+    for (var i = 0; i < matchit.length; i++) {
+      if (i) teksti += ", ";
+      teksti += "[" + matchit[i] + "]";
+    }
+  } */
+
+  console.log(pros.name + " -> " + tehtluokkastr);
+  if (!matchit) return;
+
+  var nykytehtavat = {};
+  $("#"+pros.id).outRels("serving-relationship").targetEnds("business-function").filter(fthHaving({"Tunniste": null})).each(function (tlelem) {
+    nykytehtavat[tlelem.prop("Tunniste")] = tlelem;
+  });
+
+  for (var i = 0; i < matchit.length; i++) {
+    if (!(matchit[i] in tehtavaluokkaMap)) {
+      console.error("- Prosessin " + pros.name + " tehtäväluokkaa " + matchit[i] + " ei löydy, ohitetaan");
+      continue;
+    }
+    if (!(matchit[i] in nykytehtavat)) {
+      model.createRelationship("serving-relationship", "", pros, tehtavaluokkaMap[matchit[i]]);
+      console.log("- Lisättiin prosessille " + pros.name + " yhteys tehtäväluokkaan " + tehtavaluokkaMap[matchit[i]]);
+    } else {
+      delete nykytehtavat[matchit[i]];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
+    }
+  }
+  for (var tehtluokkakoodi in nykytehtavat) {
+    console.log("- Poistetaan prosessilta " + pros.name + " yhteys tehtäväluokkaan " + tehtluokkakoodi);
+    $("#"+pros.id).outRels("serving-relationship").each(function (rel) {
+      if ($("#"+rel.id).targetEnds().first().id == nykytehtavat[tehtluokkakoodi].id) {
+        rel.delete();
+        console.log("  - poistettu");
+      }
+    });
+  }
+
+
+});
+
+console.log("> Valmis");
+console.log();

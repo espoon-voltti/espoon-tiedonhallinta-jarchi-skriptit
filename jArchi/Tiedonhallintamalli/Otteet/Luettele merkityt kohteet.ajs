@@ -1,0 +1,19 @@
+﻿/*
+ * New Archi Script
+ */
+ 
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+console.show();
+console.clear();
+console.log("> Luetellaan merkityt kohteet");
+
+var kpl = 0;
+$("element").filter(fthHaving({"_Merkintä": null})).each(function (elem) {
+  console.log("- " + elem + " (" + elem.prop("_Merkintä") + ")");
+  kpl++;
+});
+
+console.log("> Valmis, lueteltiin " + kpl + " kpl elementtiä");
+console.log();

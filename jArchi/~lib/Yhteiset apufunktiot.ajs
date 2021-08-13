@@ -2,16 +2,18 @@
  * Tiedonhallintamallin skripteille yhteisiä apufunktioita ja arvoja.
  */
 
-kuvionleveys = 150;
-kuvionkorkeus = 100;
-kokoleveys = 1000;
-kuviovalix = 30;
-kuviovaliy = 15;
-reunusx = 30;
-reunusy = 30;
-noteleveys = 300;
-notekorkeus = 75;
-kuvioitamaxrivi = Math.floor((kokoleveys - 2*reunusx + kuviovalix) / (kuvionleveys+kuviovalix));
+// "use EIKU EI strict"; // ei pysty pitämään päällä koska kaikkia skriptejä ei ole kirjoitettu tätä huomioiden
+
+var kuvionleveys = 150;
+var kuvionkorkeus = 100;
+var kokoleveys = 1000;
+var kuviovalix = 30;
+var kuviovaliy = 15;
+var reunusx = 30;
+var reunusy = 30;
+var noteleveys = 300;
+var notekorkeus = 75;
+var kuvioitamaxrivi = Math.floor((kokoleveys - 2*reunusx + kuviovalix) / (kuvionleveys+kuviovalix));
 
 /**
  * Käytetään suodatattamaan vain tiedonhallintamalliin kuuluvat elementit
@@ -26,20 +28,28 @@ function fth(_elem) {
  * ei ole asetettu (toinen parametri). Ottaa argumenttina objektin, jossa avaimina ovat tarkistettavat 
  * ominaisuudet ja niiden arvoina ne arvot, joihin ko. ominaisuuksien on täsmättävä.
  */
-function fthHaving(_propFilters, _propNotFilters) {
+function fthHaving(propFilters, propNotFilters) {
   return (function() {
-    var _filters = _propFilters;
-    var _notFilters = _propNotFilters;
-    return function(_elem) {
-      if (!(_elem.prop("_Tiedonhallintamalli") == "1")) return false;
-      if (_filters) {
-        for (avain in _filters) {
-          if (!(_elem.prop(avain) == _filters[avain])) return false;
+    var filters = propFilters;
+    var notFilters = propNotFilters;
+    return function(elem) {
+      if (!(elem.prop("_Tiedonhallintamalli") == "1")) return false;
+      if (filters) {
+        for (var avain in filters) {
+          if (filters[avain]) {
+            if (elem.prop(avain) != filters[avain]) return false;
+          } else {
+            if (!elem.prop(avain)) return false;
+          }
         }
       }
-      if (_notFilters) {
-        for (avain in _notFilters) {
-          if (_elem.prop(avain) == _notFilters[avain]) return false;
+      if (notFilters) {
+        for (var avain in notFilters) {
+          if (notFilters[avain]) {
+            if (elem.prop(avain) == notFilters[avain]) return false;
+          } else {
+            if (elem.prop(avain)) return false;
+          }
         }
       }
       return true;
@@ -47,12 +57,22 @@ function fthHaving(_propFilters, _propNotFilters) {
   })();
 }
 
+function toimialaOrganisaatio(tunnus) {
+  return $("business-actor").filter(fthHaving({"Tyyppi": "Toimiala", "Toimiala": tunnus})).first();
+}
+
+function toimialanNimi(tunnus) {
+  var actor = toimialaOrganisaatio(tunnus);
+  if (actor) return actor.name;
+  return "";
+}
+
 /**
  * Käytetään vertailemaan kohteiden nimiä keskenään
  */
 function namecompare(left,right) {
-  leftname = left.name ? left.name.toUpperCase() : left.name;
-  rightname = right.name ? right.name.toUpperCase() : right.name;
+  var leftname = left.name ? left.name.toUpperCase() : left.name;
+  var rightname = right.name ? right.name.toUpperCase() : right.name;
   if (leftname > rightname) return 1;
   if (leftname < rightname) return -1; 
   return 0;
@@ -62,28 +82,28 @@ function namecompare(left,right) {
  * Käytetään vertailemaan tiedonhallintamallin prosessien tunnisteita keskenään
  */
 function tunnistecompare(left,right) {
-  tunleft = left.prop("Tunniste");
-  tunright = right.prop("Tunniste");
+  var tunleft = left.prop("Tunniste");
+  var tunright = right.prop("Tunniste");
   if (tunleft == null && tunright == null) return namecompare(left, right);
   if (tunleft == null) return 1;
   if (tunright == null) return -1;
-  leftparts = tunleft.split(".");
-  rightparts = tunright.split(".");
-  leftmatch = leftparts[0].match(/(\d+)/);  // vertaillaan ensimmäisen pisteen edeltävästä osasta vain numero-osaa
-  rightmatch = rightparts[0].match(/(\d+)/);
-  if (leftmatch && rightmatch) {
-    if (parseInt(leftmatch[0]) > parseInt(rightmatch[0])) return 1;
-    if (parseInt(leftmatch[0]) < parseInt(rightmatch[0])) return -1;
-  } else {
-    retval = namecompare(leftparts[0], rightparts[0]);
-    if (retval) return retval;
-  }
-  i = 1;
+  var leftparts = tunleft.split(".");
+  var rightparts = tunright.split(".");
+
+  var i = 0;
   while (i < leftparts.length && i < rightparts.length) {
-    if (parseInt(leftparts[i]) > parseInt(rightparts[i])) return 1;
-    if (parseInt(leftparts[i]) < parseInt(rightparts[i])) return -1;
+    var leftmatch = leftparts[i].match(/(\d+)/);  // vertaillaan pisteen edeltävästä osasta vain numero-osaa
+    var rightmatch = rightparts[i].match(/(\d+)/);
+    if (leftmatch && rightmatch) {
+      if (parseInt(leftmatch[0]) > parseInt(rightmatch[0])) return 1;
+      if (parseInt(leftmatch[0]) < parseInt(rightmatch[0])) return -1;
+    } else {
+      var retval = namecompare(leftparts[i], rightparts[i]);
+      if (retval) return retval;
+    }
     i++;
   }
+
   if (leftparts.length > i) return 1;
   if (rightparts.length > i) return -1;
   return 0;
@@ -94,13 +114,18 @@ function tunnistecompare(left,right) {
  */
 
 function keskitax(_num, _yht) {
-  _blokinleveys = _yht * (kuvionleveys + kuviovalix) - kuviovalix;
-  _vasenx = Math.round((kokoleveys - _blokinleveys)/2);
+  var _blokinleveys = _yht * (kuvionleveys + kuviovalix) - kuviovalix;
+  var _vasenx = Math.round((kokoleveys - _blokinleveys)/2);
   return _vasenx + (_num - 1) * (kuvionleveys + kuviovalix);
 }
 
 function keskitay(_alkuy, _kokokorkeus, _num, _yht) {
-  _blokinkorkeus = _yht * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
-  _yliny = Math.round((_kokokorkeus - _blokinkorkeus)/2);
+  var _blokinkorkeus = _yht * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
+  var _yliny = Math.round((_kokokorkeus - _blokinkorkeus)/2);
   return _alkuy + _yliny + (_num-1) * (kuvionkorkeus + kuviovaliy);
 }
+
+function null2e(_arg) {
+  return _arg ? _arg : "";
+}
+

@@ -2,12 +2,13 @@
  * Käy valitut näkymät läpi ja värittää ne. Kutsuu ~lib/VäritäNäkymä -skriptiä valituille näkymille
  * tai jos valittuna on kansioita, kaikille niiden sisällä oleville näkymille.
  */
- 
+
+"use //strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 console.log(">>> Aloitetaanpas väritys... " + (new Date()).toISOString());
-valinta = $("empty");
-valittavatElementit = $("empty");
+var valinta = $("empty");
+var valittavatElementit = $("empty");
 $(selection).each(function(element) {  // explode relevant folder contents
   if (element.type == "folder") {
     if ($("#"+element.id).parents().filter(function (fol) { return fol.name == "Views"; }).size() > 0) {
@@ -28,7 +29,7 @@ if (valittavatElementit.size() > 5) {
 }
 
 valittavatElementit.each(function(element) {
-  lisattavat = $("view").filter(function (view) {
+  var lisattavat = $("view").filter(function (view) {
     return $("#"+view.id).find("element").filter(function (viewelem) {
       if (viewelem.concept.id == element.id || viewelem.id == element.id) {   // vähän tässä joutuu kikkailemaan tämän kanssa, että onko elementti vai sen konsepti...
 	return true;

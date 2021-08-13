@@ -1,0 +1,302 @@
+﻿/*
+ * Skripti, jolla prosessien tiedot päivitetään lukemalla Espoon IMS:stä viedystä 
+ * CSV-tiedostosta käyttäen Papa Parse kirjastoa.
+ * 
+ * TODO: yläprosessi-alaprosessi relaatioiden laitto
+ * TODO: saa/tuottaa syötteitä relaatioiden laitto
+ * TODO: huomautuslista CSV
+ * 
+ */
+
+"use strict";
+
+var tunnistePattern = /^(([OT]|Y[AJP]?)?\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/;
+
+var imskentat = {
+  "Nimi": null,  // käsitellään erikseen
+  "Id": null,  // käsitellään erikseen
+  "Yläprosessin id": null,  // käsitellään erikseen
+  "Linkki": null,  // käsitellään erikseen
+  "Tunniste tiedonhallintamallissa *": null,  // käsitellään erikseen
+  "Prosessin kuvaus *": null,  // käsitellään erikseen
+  "Prosessin omistaja *": null,  // käsitellään erikseen
+
+  "Lopputuotos (palvelu/asiakirja) *": "Prosessissa syntyvä lopputuotos",
+  "Prosessi saa syötteitä *": "Saa syötteitä",
+  "Prosessi tuottaa syötteitä *": "Tuottaa syötteitä"
+};
+
+function sama(arvo1, arvo2) {
+  var wspatt = /[\s,]+/g;
+  if (!arvo1 && !arvo2) return true;
+  if (!arvo1 || !arvo2) return false;
+  return arvo1.replace(wspatt, " ").trim() == arvo2.replace(wspatt, " ").trim();
+}
+
+console.show();
+console.clear();
+
+console.log("> Import CSV");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+var imsUrl = model.prop("_IMSURL");
+
+var orgMap = {};
+$("business-actor").filter(fth).each(function(org) { 	// ensin organisaatiot omilla nimillään
+  orgMap[org.name] = org;
+});
+$("business-actor").filter(fth).each(function(org) {	// sitten IMS-aliaksin 
+  var aliakset = org.prop("_NimiIMSssä", true);
+  if (aliakset) {
+    for (var i=0; i<aliakset.length; i++) {
+      orgMap[aliakset[i]] = org;
+    }
+  }
+});
+
+var prosMap = {};
+var kaikkiProsMap = {};
+var prosTunnisteMap = {};
+var prosIdMap = {};
+var prosDuplTunnisteMap = {};
+$("business-process").filter(fth).each(function(pros) {
+  prosIdMap[pros.id] = pros;
+  var imsid = pros.prop("IMS ID");
+  if (imsid > 0) {
+    prosMap[imsid] = pros;
+    kaikkiProsMap[imsid] = pros;
+  }
+  var tunniste = pros.prop("Tunniste");
+  if (tunniste) tunniste = tunniste.trim();
+  if (tunniste) {
+    if (prosTunnisteMap[tunniste]) console.error("Tunniste \"" + tunniste + "\" löytyy Archista useammalla prosessilla. Tarkista tilanne.");
+    prosTunnisteMap[tunniste] = pros;
+  }
+});
+
+var muuttuneetPros = {};
+
+var businessFolder = $("folder.Business").first();
+var tiedonhallintamalliFolder = $("#"+businessFolder.id).find("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalliFolder == null) {
+  tiedonhallintamalliFolder = businessFolder.createFolder("Tiedonhallintamalli");
+}
+var prosessitFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Prosessihierarkia").first();
+if (prosessitFolder == null) {
+  prosessitFolder = tiedonhallintamalliFolder.createFolder("Prosessihierarkia");
+}
+
+var filePath = window.promptOpenFile({ title: "Avaa prosessilistaus CSV", filterExtensions: ["*.CSV"], fileName: "prosessit.csv" });
+if (!filePath) {
+  console.log("> Cancelled");
+  exit();
+}
+
+var csvFile =  new java.io.InputStreamReader(new java.io.FileInputStream(filePath), "UTF-8");
+console.log("> Encoding " + csvFile.getEncoding());
+
+var csvtext ="";
+var data = csvFile.read();
+console.log("> Please Wait...");
+while(data != -1) {
+    if (data != 0xfeff) {  // skipataan mahdollinen UTF-8 byte order mark
+      var merkki = String.fromCharCode(data);
+      csvtext+=merkki;
+    }
+    data = csvFile.read();
+}
+csvFile.close();
+
+console.log("> File loaded");
+var parsedCsv = Papa.parse(csvtext, {header: true});
+console.log("> File parsed");
+
+var csvData = parsedCsv.data;
+var csvMeta = parsedCsv.meta;
+
+for (var kentta in imskentat) {
+  if (csvMeta.fields.indexOf(kentta) < 0) {
+    if (!window.confirm("CSV:stä ei löydy saraketta nimeltä \"" + kentta +"\". IMS listauksen tiedostomuoto on ehkä muuttunut ja import-skripti tulisi tarkistaa. Haluatko jatkaa?"))
+      exit();
+  }
+}
+
+/* console.log("Headers:");
+for (var j = 0; j < csvMeta.fields.length; j++) {
+  console.log("- " + j + ": " + csvMeta.fields[j]);
+} */
+
+var outCsvData = [];
+
+for (var i = 0; i < csvData.length - 1; i++) {
+  var writeout = null;
+  var prosRivi = csvData[i];
+  var imsId = prosRivi["Id"];
+  var nykyPros = prosMap[imsId];
+  var tunniste = prosRivi["Tunniste tiedonhallintamallissa *"];
+  if (tunniste) tunniste = tunniste.trim();
+  var nimi = prosRivi["Nimi"];
+
+  var tunnisteNimessa = null;
+  var match = tunnistePattern.exec(nimi);
+  if (match) tunnisteNimessa = match[1];
+
+  if (!tunniste) {   // ei tunnistetta, eli ei merkitty tiedonhallintamalliin kuuluvaksi
+    // // if (nykyPros) console.error("Prosessilla " + imsId + ": " + nimi + " ei tunnistetta, mutta vastine löytyy Archista IMS ID:llä: " + nykyPros + "; ohitetaan");
+    if (tunnisteNimessa) {
+      writeout = "** TUNNISTE PUUTTUU, MUTTA NIMEN ALKU NÄYTTÄÄ TUNNISTEELTA";
+      console.error(imsId + " " + nimi + ": " + writeout);
+    } else continue;  // muussa tapauksessa mennään eteenpäin seuraavaan riviin, ei ilmeisesti kuulu tiedonhallintamalliin
+  }
+
+  if (!writeout && (!tunnistePattern.exec(tunniste) || tunniste != tunnisteNimessa)) {
+    writeout = "** PROSESSIN TUNNISTE EI OLE OIKEAN MUOTOINEN TAI TUNNISTE EI VASTAA NIMEÄ";
+    console.error(imsId + " " + nimi + ": " + writeout + " \"" + tunniste + "\"");
+  }
+
+  if (!writeout && prosDuplTunnisteMap[tunniste]) {
+    console.error("Prosessi " + imsId + " " + tunniste + " " + nimi + " tulee uudestaan tuplana");
+    var prosRivi2 = prosDuplTunnisteMap[tunniste];
+    var outdatarow2 = {};
+    outdatarow2["Id"] = prosRivi2["Id"];
+    outdatarow2["Tunniste"] = prosRivi2["Tunniste tiedonhallintamallissa *"];
+    outdatarow2["IMS-nimi"] = prosRivi2["Nimi"];
+    outdatarow2["Kenttä"] = "** Tämä prosessi on seuraavan (" + imsId + ") duplikaatti";
+    outCsvData.push(outdatarow2);
+    writeout = "** SAMA PROSESSI ON JO TUOTU, DUPLIKAATTI PITÄÄ POISTAA";
+  }
+  if (!writeout) prosDuplTunnisteMap[tunniste] = prosRivi;
+
+  if (!writeout) {
+    if (!nykyPros) {
+      nykyPros = prosTunnisteMap[tunniste];
+      if (nykyPros) console.log("Prosessia ei löytynyt IMS ID:n perusteella. Löydettiin tunnisteen perusteella prosessille " + imsId + ": " + nimi + " vastine Archista: " + nykyPros);
+    }
+    if (!nykyPros) {
+      console.log("Prosessia " + imsId + " " + tunniste + " " + nimi + " ei löydy Archista");
+      writeout = "** EI LÖYDY ARCHISTA";
+    }
+  }
+
+
+  if (writeout) {
+    var outdatarow = {};
+    outdatarow["Id"] = imsId;
+    outdatarow["Tunniste"] = tunniste;
+    outdatarow["IMS-nimi"] = nimi;
+    outdatarow["Kenttä"] = writeout;
+    outCsvData.push(outdatarow);
+    continue;
+  }
+
+  delete prosIdMap[nykyPros.id];   // poistetaan prosMapista, jotta sinne jää lopuksi ne mitä ei enää saatu IMS:stä
+
+  var muutos = {};
+  var vanha = {};
+
+  if (!sama(nimi, nykyPros.name)) {
+    vanha["Nimi"] = nykyPros.name;
+    muutos["Nimi"] = nimi;
+  }
+  if (tunniste != nykyPros.prop("Tunniste")) {
+    console.error("Tunniste muuttuu prosessilla " + nykyPros + ", vanha: \"" + nykyPros.prop("Tunniste") + "\", uusi: \"" + tunniste + "\"");
+    vanha["Tunniste"] = nykyPros.prop("Tunniste");
+    muutos["Tunniste"] = tunniste;
+  }
+  if (!sama(prosRivi["Prosessin kuvaus *"], nykyPros.documentation)) {
+    vanha["Kuvaus"] = nykyPros.documentation;
+    muutos["Kuvaus"] = prosRivi["Prosessin kuvaus *"];
+  }
+  for (var kentta in imskentat) {
+    if (imskentat[kentta]) {   // käsitellään tässä vain ne, joille ei ole erityiskäsittelyä
+      if (prosRivi[kentta]) {
+        if (!sama(prosRivi[kentta], nykyPros.prop(imskentat[kentta]))) {  // kentällä on sisältöä csv:ssä ja se on eri kuin olemassa oleva tieto
+          vanha[imskentat[kentta]] = nykyPros.prop(imskentat[kentta]);
+          muutos[imskentat[kentta]] = prosRivi[kentta];
+        }
+      } else {
+        if (nykyPros.prop(imskentat[kentta])) {  // kentällä ei ole sisältöä csv:ssä ja olemassa on jokin tieto
+          console.log("POISTETAAN KENTTÄÄ " + imskentat[kentta] + " PROSESSILTA " + nykyPros.name);
+          vanha[imskentat[kentta]] = nykyPros.prop(imskentat[kentta]);
+          muutos[imskentat[kentta]] = "(PUUTTUU)";
+        }
+      }
+    }
+  }
+
+  var nykyOmistajaRel = $("#"+nykyPros.id).inRels("association-relationship.vastaa").first();
+  var nykyOmistaja = null;
+  if (nykyOmistajaRel) nykyOmistaja = $("#"+nykyOmistajaRel.id).sourceEnds("business-actor").first();
+  var uusiOmistaja = orgMap[prosRivi["Prosessin omistaja *"]];
+  if (uusiOmistaja) {
+    if (!nykyOmistaja || nykyOmistaja.id != uusiOmistaja.id) { // omistajatieto eroaa
+      vanha["Omistaja"] = nykyOmistaja;
+      muutos["Omistaja"] = uusiOmistaja;
+    } 
+  } else {
+    var herja = "Prosessin " + nykyPros.name + " IMS omistajatietoa vastaavaa organisaatiota ei löydy (" + prosRivi["Prosessin omistaja *"] + "). Omistajatieto jätetään asettamatta/muuttamatta (nykyisin " + nykyOmistaja + "). Korjaa puute ja aja import uudelleen.";
+    console.error(herja);
+    vanha["Omistaja"] = nykyOmistaja ? nykyOmistaja.name : nykyOmistaja;
+    muutos["Omistaja"] = prosRivi["Prosessin omistaja *"] + " (EI LÖYDY ARCHISTA)";
+  }
+
+  var muutoksia = 0;
+  for (var muuttunut in muutos) {
+    muutoksia++;
+  }
+  if (muutoksia) {
+    console.log("- Prosessin " + nykyPros.name + " tietoja muuttunut " + muutoksia + " kpl");
+    for (var muuttunut in muutos) {
+      var outdatarow = {};
+      outdatarow["Id"] = imsId;
+      outdatarow["Tunniste"] = tunniste;
+      outdatarow["IMS-nimi"] = nimi;
+      outdatarow["Kenttä"] = muuttunut;
+      outdatarow["Archi arvo"] = vanha[muuttunut];
+      outdatarow["IMS arvo"] = muutos[muuttunut];
+      outCsvData.push(outdatarow);
+    }
+  } else {
+    console.log("- Prosessilla " + nykyPros.name + " ei muuttuneita tietoja.");
+  }
+  
+}  // CSV-rivien looppi
+
+console.log("> Parsing Complete");
+
+for (var prosId in prosIdMap) {
+  var outdatarow = {};
+  outdatarow["Id"] = prosId;
+  var nykypros = prosIdMap[prosId];
+  console.log("Prosessi " + nykypros + " löytyy vain Archista");
+  outdatarow["Tunniste"] = nykypros.prop("Tunniste");
+  outdatarow["IMS-nimi"] = nykypros.name;
+  outdatarow["Kenttä"] = "** LÖYTYY VAIN ARCHISTA";
+  outCsvData.push(outdatarow);
+}
+
+console.log("> Tulostettu vain Archissa olleet prosessit");
+
+var outCsvHeaders = [
+    "Id",
+    "Tunniste",
+    "IMS-nimi",
+    "Kenttä",
+    "Archi arvo",
+    "IMS arvo"
+];
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "prosessit-vertailu.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+var outCSV = Papa.unparse({fields:outCsvHeaders, data:outCsvData});
+$.fs.writeFile(exportFile, outCSV);
+
+console.log("> Tiedosto kirjoitettu");
+
+console.log("> Valmis");

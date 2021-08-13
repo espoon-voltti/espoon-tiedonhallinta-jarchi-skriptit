@@ -1,0 +1,374 @@
+﻿/*
+ * Luetaan sisään Dynastyn XML-export JSON-muotoon käännettynä.
+ * JSON:iksi kääntäminen tehty XSLT-muunnoksena, johon löytyy xsl-tiedosto täältä: https://github.com/bramstein/xsltjson
+ * ja sieltä conf-hakemistosta xml-to-json.xsl
+ * Kyseiseen xsl-tiedostoon piti tehdä muokkaus, jottei tehtäväluokkien tunnisteita muuteta desimaaliluvuiksi vaan
+ * säilytetään lainausmerkeissä. Jolloin xls-tiedoston rivi 413 muutetetaan muotoon (ensin poiskommentoitu vanha rivi ja sitten korvaava):
+ *        <!-- <xsl:when test="normalize-space(.) ne . or not((string(.) castable as xs:integer  and not(starts-with(string(.),'+')) and not(starts-with(string(.),'0') and not(. = '0'))) or (string(.) castable as xs:decimal  and not(starts-with(string(.),'+')) and not(starts-with(.,'-.')) and not(starts-with(.,'.')) and not(starts-with(.,'-0') and not(starts-with(.,'-0.'))) and not(ends-with(.,'.')) and not(starts-with(.,'0') and not(starts-with(.,'0.'))) )) and not(. = 'false') and not(. = 'true') and not(. = 'null')"> -->
+ *        <xsl:when test="not(. = 'false') and not(. = 'true') and not(. = 'null')">
+ * Tämän jälkeen voi ajaa XSLT-muunnoksen esim. Saxon-kirjastolla, joka löytyy https://sourceforge.net/projects/saxon/files/Saxon-HE/10/Java/
+ * Muunnoksen käynnistys komennolla esim.
+ * java -jar saxon-he-10.5.jar "9_4 Dynasty TOS.xml" xml-to-json.xsl > Dynasty-TOS.json
+ * Sitten näin syntynyt JSON luetaan sisään tällä jArchi-skriptillä. Espoossa on kaksi eri TOS-ilmentymää Dynastyssa, 
+ * joten tässä luetaan kaksi tiedostoa.
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+var dokumentinMetadatat = {
+  "Arkistointitapa": null,
+  //"Asiakirjan tyyppi": null,
+  "Asiakirjatyypin tarkenne (=asiakirjallinen tieto)": null,
+  "Henkilötietoluonne": null,
+  "Hävitystapa": null,
+  "Julkisuusluokka": null,
+  "Salassapitoaika": null,
+  "Salassapitoperuste": null,
+  "Siirretäänkö säilytysajan jälkeen arkistoon": null,
+  "Säilytysaika": null,
+  "Säilytysajan peruste": null,
+  "Säilytystapa": null,
+  //"Tiedonhallinta": null,
+  //"Tietojärjestelmä": null,
+  "Tietovaranto": null
+}
+
+function muotoileVuosi(arvo) {
+  if (+arvo) return arvo + " vuotta";  // jos pelkkä numero, lisätään perään teksti "vuotta"
+  return arvo;
+}
+
+var metadatanMuotoilijat = {
+  "Salassapitoaika": muotoileVuosi,
+  "Säilytysaika": muotoileVuosi
+};
+
+function ensureArray(obj) {
+  if (Array.isArray(obj)) return obj;
+  return [obj];
+}
+
+function lueMetadataInfot(infoelem) {
+  var metadatamap = {};
+  var metadatat = ensureArray(infoelem["MetaInfoNew"]);
+  for (var i = 0; i < metadatat.length; i++) {
+    var metadataName = metadatat[i]["Title"];
+    var valuemap = {};
+    //valuemap.nimike = metadatat[i]["Title"];  // turha, onko käytössä?
+    valuemap.tyyppi = metadatat[i]["DataType"];
+    var choiceSet = metadatat[i]["ChoiceSet"];
+    if (choiceSet) {
+      var choices = ensureArray(choiceSet["MetadataChoice"]);
+      for (var j = 0; j < choices.length; j++) {
+        valuemap[choices[j]["ChoiceId"]] = /^[^|]*/.exec(choices[j]["ChoiceDisplayText"])[0];
+      }
+    }
+    metadatamap[metadataName] = valuemap;
+    //console.log(metadataName)
+    //console.log(valuemap);
+  }
+  //console.log();
+  return metadatamap;
+}
+
+function muotoileTieto(tunniste, metadatavalues, metadatamap, palautataulukko) {
+  var metadatainfo = metadatamap[tunniste];
+  var muotoilija = metadatanMuotoilijat[tunniste];
+  var arvo = metadatavalues[tunniste];
+  if (arvo && metadatainfo.tyyppi == "Choice") {
+    arvo = metadatainfo[arvo];
+  } else if (arvo && metadatainfo.tyyppi == "Multichoice") {
+    var arvot1 = arvo.split("|");
+    arvo = [];
+    for (var i = 0; i < arvot1.length; i++) {
+      arvo.push(metadatainfo[arvot1[i]] ? metadatainfo[arvot1[i]] : arvot1[i]);
+    }
+  }
+  if (arvo && muotoilija) arvo = muotoilija(arvo);
+  if (!palautataulukko && arvo && Array.isArray(arvo)) {
+    var teksti = "";
+    for (var i = 0; i < arvo.length; i++) {
+      if (i > 0) teksti += ", ";
+      teksti += arvo[i];
+    }
+    arvo = teksti;
+  }
+  return arvo ? arvo : "";
+}
+
+console.show();
+console.clear();
+console.log("> Tiedonohjaus JSON import");
+model.purpose;  // feilataan nyt jos mallia ei valittuna
+
+var tossit = [];
+while (true) {
+  var filePath = window.promptOpenFile({ title: "Avaa tiedonohjaussuunnitelma JSON, cancel jos ei lisää", 
+    filterExtensions: ["*.json"], fileName: "tiedonohjaus.json" });
+  if (!filePath) break;
+  tossit.push({file: filePath});
+}
+if (!tossit.length) {
+  console.log("> Cancelled");
+  exit();
+}
+
+var businessFolder = $("folder.Business").first();
+var tiedonhallintamalliFolder = $("#"+businessFolder.id).children("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalliFolder == null) {
+  tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
+}
+var tehtavaluokatFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tehtäväluokat").first();
+if (tehtavaluokatFolder == null) {
+  tehtavaluokatFolder = tiedonhallintamalliFolder.createFolder("Tehtäväluokat");
+}
+
+var tehtavaluokkaMap = {};
+$("business-function").filter(fth).each(function (bf) {
+  var tehtavaluokka = bf.prop("Tunniste");
+  if (!tehtavaluokka) return;
+  tehtavaluokkaMap[tehtavaluokka] = {elem: bf};
+});
+
+var aikaleima = new Date().format("isoDateTime");
+
+for (var h = 0; h < tossit.length; h++) {
+  console.log("> Starting reading file " + tossit[h].file + "...");
+  var jsontext = "";
+  var br = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(tossit[h].file), "UTF-8"));
+  var x;
+  while (x = br.readLine()) {
+    jsontext += x + "\n";
+  }
+  br.close();
+
+  var obj = JSON.parse(jsontext);
+
+  //console.log("CASEGROUP METADATA");
+  //var casemetadatamap = lueMetadataInfot(obj["XExportNew"]["CasegroupMetadataInfo"]);
+  //console.log("DOCUMENT METADATA");
+  var docmetadatamap = lueMetadataInfot(obj["XExportNew"]["DocumentMetadataInfo"]);
+  for (var metadataname in dokumentinMetadatat) {
+    if (!(metadataname in docmetadatamap)) {
+      console.error(tossit[h].file + ":ssa ei löydy metatietotyyppiä " + metadataname);  // infotaan, sinänsä ei seuraa muuta kuin että näitä ei sitten tule 
+    }
+  }
+
+  var taskmap = {};
+  var tehtluokat = ensureArray(obj["XExportNew"]["CasegroupHierarchy"]["XCasegroupNew"]);
+  for (var i = 0; i < tehtluokat.length; i++) { 
+    var tehtluokkakoodi = tehtluokat[i]["FullCasegroupCode"];
+    //var debug = (tehtluokkakoodi.startsWith("12.06"));
+    var nimike = tehtluokat[i]["Title"];
+    //var muutos = [];
+    console.log(tehtluokkakoodi + " " + nimike);
+
+    var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+    //debug? console.log("Ennen: " + JSON.stringify(tehtluokkaitem)) :"";
+    var tehtluokka;
+    if (tehtluokkaitem) {
+      tehtluokka = tehtluokkaitem.elem;
+      var saatunimi = tehtluokkakoodi + " " + nimike;
+      if (tehtluokka.name != saatunimi) {
+        console.log("- Tehtäväluokan nimi muuttuu: " + tehtluokka.name + " -> " + saatunimi);
+        tehtluokka.name = saatunimi;
+        //muutos.push("Nimi");
+      }
+    } else {
+      var kansio = tehtavaluokatFolder;
+      var parentkoodi = tehtluokat[i]["ParentFullCasegroupCode"];
+      var parentluokka = null;
+      if (parentkoodi && !/^\d\d$/.exec(tehtluokkakoodi)) {  // muu kuin päätason tehtäväluokka
+        parentluokka = tehtavaluokkaMap[parentkoodi];
+        if (!parentluokka) {
+          console.error("Tehtäväluokan " + tehtluokkakoodi + " " + nimike + " yläluokkaa " + parentkoodi + " ei löydy, ohitetaan");
+          continue;
+        }
+        parentluokka = parentluokka.elem;
+        var parentkansio = $("#"+parentluokka.id).parent().first();
+        if (/^\d\d(\.\d\d){4,}$/.exec(tehtluokkakoodi)) {
+          kansio = parentkansio;
+        } else {
+          kansio = $("#"+parentkansio.id).children("folder").filter(function (fld) { 
+            return fld.prop("Tunniste") == parentkoodi; 
+          }).first();
+          if (!kansio) {
+            kansio = parentkansio.createFolder(parentluokka.name);
+            kansio.prop("Tunniste", parentkoodi);
+          }
+        }
+      }
+      tehtluokka = model.createElement("business-function", tehtluokkakoodi + " " + nimike, kansio);
+      tehtluokka.prop("_Tiedonhallintamalli", "1");
+      tehtluokka.prop("Tunniste", tehtluokkakoodi);
+      tehtluokka.prop("_Päivitetty", aikaleima);
+      if (parentluokka) model.createRelationship("specialization-relationship", "", tehtluokka, parentluokka);
+      tehtluokkaitem = {elem: tehtluokka};
+      tehtavaluokkaMap[tehtluokkakoodi] = tehtluokkaitem;
+      console.log("- Lisättiin tehtäväluokka " + tehtluokka + " kansioon " + kansio);
+    } 
+
+    tehtluokkaitem.loytyi = true;
+
+
+    var tasks = tehtluokat[i]["Tasks"];
+    if (tasks) {
+      //debug? console.log("Joo " + tehtluokkakoodi) :"";
+      //debug? console.log(tasks) :"";
+
+      var kasittelyvaiheet = tehtluokkaitem.kasittelyvaiheet;
+      if (!kasittelyvaiheet) {
+        kasittelyvaiheet = tehtluokkaitem.kasittelyvaiheet = {};
+        tehtluokkaitem.jarjestys = []; // tallennetaan käsittelyvaiheiden nimet myös kohtaamisjärjestyksessä (tulostusjärjestys)
+      }
+      var tehtavat = ensureArray(tasks["XTaskNew"]);
+      //debug? console.log(tehtavat) :"";
+      for (var j = 0; j < tehtavat.length; j++) {
+        //debug? console.log("j = " + j) :"";
+        //debug? console.log(tehtavat[j]) :"";
+        taskmap[tehtavat[j]["Id"]] = tehtavat[j];
+        var tehtavanimi = tehtavat[j]["Title"];
+        var doctypesroot = tehtavat[j]["DocumentTypes"];
+        var parent = taskmap[tehtavat[j]["ParentId"]];
+        var parentnimi = parent? parent["Title"] : undefined;
+        if (parentnimi) tehtavanimi = parentnimi;  // käytetään parent-nimeä, jos on
+        var doktyypit = kasittelyvaiheet[tehtavanimi];
+        if (!doktyypit) { 
+          doktyypit = kasittelyvaiheet[tehtavanimi] = [];
+          tehtluokkaitem.jarjestys.push(tehtavanimi);
+        }
+        if (doctypesroot) {
+          var doctypes = ensureArray(doctypesroot["XDocumentTypeNew"]);
+          for (var k = 0; k < doctypes.length; k++) {
+            var metadatavalues = {};
+            var metadatat = ensureArray(doctypes[k]["Metadatas"]["XMetadata"]);
+            for (var l = 0; l < metadatat.length; l++) {
+              //debug? console.log("l = " + l) :"";
+              //debug? console.log(metadatat[l]) :"";
+              if (metadatat[l]["Title"] in dokumentinMetadatat) {
+                metadatavalues[metadatat[l]["Title"]] = metadatat[l]["Value"];
+              }
+            }
+            doktyypit.push(metadatavalues);
+          }
+        }
+      }
+    }
+    //debug? console.log("Jälk: " + JSON.stringify(tehtluokkaitem)) :"";
+  }
+}
+
+for (var tehtluokkakoodi in tehtavaluokkaMap) {
+  var kuvaus = "";
+  var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+  if (!tehtluokkaitem.loytyi) continue;
+
+  var tehtluokka = tehtluokkaitem.elem;
+  
+  for (var h = 0; tehtluokkaitem.jarjestys && h < tehtluokkaitem.jarjestys.length; h++) {
+    var kasittelyvaihe = tehtluokkaitem.jarjestys[h];
+    kuvaus += "KÄSITTELYVAIHE " + kasittelyvaihe + "\n";
+    doktyypit = tehtluokkaitem.kasittelyvaiheet[kasittelyvaihe];
+    for (var i = 0; doktyypit && i < doktyypit.length; i++) {
+      var metadatavalues = doktyypit[i];
+      kuvaus += "- " + muotoileTieto("Asiakirjatyypin tarkenne (=asiakirjallinen tieto)", metadatavalues, docmetadatamap);
+      var erotin = ":";
+      var lisaaTieto = function(tieto, ennen, jalkeen, ohitaerotin) {
+        var teksti = muotoileTieto(tieto, metadatavalues, docmetadatamap);
+        if (teksti) {
+          kuvaus += (ohitaerotin ? "" : erotin) + " " + (ennen ? ennen : "") + teksti + (jalkeen ? jalkeen : "");
+          erotin = ";";
+          return true;
+        }
+        return false;
+      }
+      lisaaTieto("Julkisuusluokka");
+      var sailytys = lisaaTieto("Säilytysaika", "säilytys ");
+      lisaaTieto("Säilytystapa", "", "", true);
+      if (sailytys) lisaaTieto("Säilytysajan peruste", "(", ")", true);
+      var salassapito = lisaaTieto("Salassapitoaika", "salassapito ");
+      if (salassapito) lisaaTieto("Salassapitoperuste", "(", ")", true);
+      lisaaTieto("Henkilötietoluonne");
+      lisaaTieto("Siirretäänkö säilytysajan jälkeen arkistoon", "siirto arkistoon ");
+      lisaaTieto("Arkistointitapa", "", "", true);
+      lisaaTieto("Hävitystapa", "hävitys ");
+      lisaaTieto("Tietovaranto");
+      kuvaus += "\n";  
+    }
+    kuvaus += "\n";  
+  }
+
+  if (tehtluokka.documentation != kuvaus) {
+    tehtluokka.documentation = kuvaus;
+    console.log("- Kuvaus päivittyi " + tehtluokka);
+    tehtluokka.prop("_Päivitetty", aikaleima);
+  }
+
+}
+
+console.log();
+
+for (var tehtluokkakoodi in tehtavaluokkaMap) {
+  var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+  if (!tehtluokkaitem.loytyi) {
+    var tehtluokka = tehtluokkaitem.elem;
+    console.error("- TEHTÄVÄLUOKKAA EI ENÄÄ LÖYTYNYT - TEE JOTAIN? " + tehtluokka);
+  }
+}
+
+console.log("> Tarkistetaan tietovarannot");
+var tietovarantoMap = {};
+$("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (tvelem) {
+  tietovarantoMap[tvelem.name] = tvelem;
+});
+for (var tehtluokkakoodi in tehtavaluokkaMap) {
+  var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+  if (!tehtluokkaitem.loytyi) continue;
+  var tietovarannot = {};
+  for (var kasittelyvaihe in tehtluokkaitem.kasittelyvaiheet) {
+    doktyypit = tehtluokkaitem.kasittelyvaiheet[kasittelyvaihe];
+    for (var i = 0; doktyypit && i < doktyypit.length; i++) {
+      var metadatavalues = doktyypit[i];
+      var varantonimet = muotoileTieto("Tietovaranto", metadatavalues, docmetadatamap, true);
+      for (var j = 0; j < varantonimet.length; j++) {
+        tietovarannot[varantonimet[j]] = true;
+      }
+    }    
+  }
+
+  var nykyvarannot = {};
+  $("#"+tehtluokkaitem.elem.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (tvelem) {
+    nykyvarannot[tvelem.name] = tvelem;
+  });
+
+  for (var varantonimi in tietovarannot) {
+    if (!(varantonimi in tietovarantoMap)) {
+      console.error("Tehtäväluokan " + tehtluokkakoodi + " tietovarantoa " + varantonimi + " ei löydy, ohitetaan");
+      continue;
+    }
+    if (!(varantonimi in nykyvarannot)) {
+      model.createRelationship("serving-relationship", "", tietovarantoMap[varantonimi], tehtluokkaitem.elem);
+      console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys tietovarantoon " + varantonimi);
+    } else {
+      delete nykyvarannot[varantonimi];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
+    }
+  }
+  for (var varantonimi in nykyvarannot) {
+    console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem + " yhteys tietovarantoon " + varantonimi);
+    $("#"+tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
+      if ($("#"+rel.id).sourceEnds().first().id == nykyvarannot[varantonimi].id) {
+        rel.delete();
+        console.log("  - poistettu");
+      }
+    });
+  }
+
+}
+
+model.prop("Päivitetty Tiedonohjaussuunnitelmasta", aikaleima);
+console.log("> Valmis");
+console.log();
+

@@ -1,0 +1,143 @@
+﻿/*
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+function ensureArray(obj) {
+  if (Array.isArray(obj)) return obj;
+  return [obj];
+}
+
+function lueMetadataInfot(infoelem) {
+  var metadatamap = {};
+  var metadatat = ensureArray(infoelem["MetaInfoNew"]);
+  for (var i = 0; i < metadatat.length; i++) {
+    var metadataName = metadatat[i]["MetadataName"];
+    var valuemap = {};
+    valuemap.nimike = metadatat[i]["Title"];
+    valuemap.tyyppi = metadatat[i]["DataType"];
+    var choiceSet = metadatat[i]["ChoiceSet"];
+    if (choiceSet) {
+      var choices = ensureArray(choiceSet["MetadataChoice"]);
+      for (var j = 0; j < choices.length; j++) {
+        valuemap[choices[j]["ChoiceId"]] = /^[^|]*/.exec(choices[j]["ChoiceDisplayText"])[0];
+      }
+    }
+    metadatamap[metadataName] = valuemap;
+    //console.log(metadataName)
+    //console.log(valuemap);
+  }
+  //console.log();
+  return metadatamap;
+}
+
+function pad(str, len) {
+  if (!str) str = "";
+  var num = len - str.length;
+  for (var i = 0; i < num; i++) str += " ";
+  return str;
+}
+
+console.show();
+console.clear();
+console.log("> Tiedonohjaus JSON luetellaan metadatatyypit");
+model.purpose;  // feilataan nyt jos mallia ei valittuna
+
+var tossit = [];
+var filePath = window.promptOpenFile({ title: "Avaa Dynasty tiedonohjaussuunnitelma JSON", filterExtensions: ["*.json"], fileName: "tiedonohjaus Dynasty.json" });
+if (!filePath) {
+  console.log("> Cancelled");
+  exit();
+}
+tossit.push({nimi: "Dynasty TOS", file: filePath});
+filePath = window.promptOpenFile({ title: "Avaa Espoon tiedonohjaussuunnitelma JSON", filterExtensions: ["*.json"], fileName: "tiedonohjaus Espoo.json" });
+if (!filePath) {
+  console.log("> Cancelled");
+  exit();
+}
+tossit.push({nimi: "Espoon TOS", file: filePath});
+
+var aikaleima = new Date().format("isoDateTime");
+
+var metadatanimimap = {};
+
+for (var h = 0; h < tossit.length; h++) {
+  console.log("> Starting reading file " + tossit[h].file + "...");
+  var jsontext = "";
+  var br = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(tossit[h].file), "UTF-8"));
+  var x;
+  while (x = br.readLine()) {
+    jsontext += x + "\n";
+  }
+  br.close();
+
+  var obj = JSON.parse(jsontext);
+
+  //console.log("CASEGROUP METADATA");
+  var casemetadatamap = lueMetadataInfot(obj["XExportNew"]["CasegroupMetadataInfo"]);
+  //console.log("DOCUMENT METADATA");
+  var docmetadatamap = lueMetadataInfot(obj["XExportNew"]["DocumentMetadataInfo"]);
+
+  var tietovaranto = null;
+  for (var metadataname in docmetadatamap) {
+    var tiedot = metadatanimimap[docmetadatamap[metadataname].nimike];
+    if (!tiedot) tiedot = metadatanimimap[docmetadatamap[metadataname].nimike] = {};
+    tiedot[tossit[h].nimi] = metadataname;
+    if (docmetadatamap[metadataname].nimike == "Tietovaranto") tietovaranto = docmetadatamap[metadataname];
+  }
+  
+  var tvelems = {};
+  $("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (elem) {
+    tvelems[elem.id] = elem;
+  });
+
+  if (tietovaranto) {
+    console.log("Tietovarannot");
+    for (var avain in tietovaranto) {
+      var tvelem = $("product." + tietovaranto[avain]).first();
+      console.log("- " + avain + " (" + tietovaranto[avain] + ") " + tvelem);
+      if (tvelem) delete tvelems[tvelem.id];
+    }
+    console.log();
+  }
+
+  for (var elem in tvelems) {
+    console.log("* Ei löytynyt tietovarantoa " + tvelems[elem]);
+  }
+
+}
+
+var metadatanimet = [];
+for (var metadatanimi in metadatanimimap) {
+  metadatanimet.push(metadatanimi);
+}
+metadatanimet.sort();
+
+// CSV
+console.log("," + tossit[0].nimi + "," + tossit[1].nimi);
+for (var i = 0; i < metadatanimet.length; i++) {
+    console.log('"' + metadatanimet[i] + '","' 
+      + null2e(metadatanimimap[metadatanimet[i]][tossit[0].nimi]) + '","' 
+      + null2e(metadatanimimap[metadatanimet[i]][tossit[1].nimi]) + '"');
+}
+
+console.log();
+
+// ASCII-taulukko
+console.log("  " + pad("", 30) + pad(tossit[0].nimi, 30) + pad(tossit[1].nimi, 30));
+
+for (var i = 0; i < metadatanimet.length; i++) {
+    console.log("- " + pad(metadatanimet[i], 30) 
+      + pad(metadatanimimap[metadatanimet[i]][tossit[0].nimi], 30) 
+      + pad(metadatanimimap[metadatanimet[i]][tossit[1].nimi], 30));
+}
+
+console.log();
+
+
+console.log("> Valmis");
+console.log();
+
