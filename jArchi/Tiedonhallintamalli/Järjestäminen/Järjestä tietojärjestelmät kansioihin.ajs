@@ -1,0 +1,58 @@
+﻿/*
+ * Järjestää Espoon tiedonhallintamalliin kuuluvat tietojärjestelmät tietyn logiikan mukaisesti Archi-mallin 
+ * kansion Application > Tiedonhallintamalli > Tietojärjestelmät alikansioiksi.
+ */
+ 
+cnt = 0;
+
+application = $("folder.Application").first();
+tiedonhallintamalli = $("#"+application.id).find("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalli == null) {
+  tiedonhallintamalli = application.createFolder("Tiedonhallintamalli");
+}
+tietojarj = $("#"+tiedonhallintamalli.id).children("folder.Tietojärjestelmät").first();
+if (tietojarj == null) {
+  tietojarj = tiedonhallintamalli.createFolder("Tietojärjestelmät");
+}
+salkussa = $("#"+tietojarj.id).children("folder.Järjestelmäsalkussa").first();
+if (salkussa == null) {
+  salkussa = tietojarj.createFolder("Järjestelmäsalkussa");
+}
+eisalkussa = $("#"+tietojarj.id).children("folder.Salkun ulkopuoliset").first();
+if (eisalkussa == null) {
+  eisalkussa = tietojarj.createFolder("Salkun ulkopuoliset");
+}
+epaviralliset = $("#"+tietojarj.id).children("folder.Selvitettävät").first();
+if (epaviralliset == null) {
+  epaviralliset = tietojarj.createFolder("Selvitettävät");
+}
+
+console.log("Järjestetään tietojärjestelmät kansioihin...");
+
+$("application-component").each(function (element) {
+  if (!element.prop("_Tiedonhallintamalli")) {
+    console.log("Ei osa tiedonhallintamallia: " + element);
+    return;
+  }
+
+  if (element.prop("Virallinen") == "F") ylakansio = epaviralliset;
+    else if (element.prop("Järjestelmäsalkku ID") > 0) ylakansio = salkussa;
+    else ylakansio = eisalkussa;
+  
+  omistaja = $("#"+element.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").first();
+  kansionimi = "Muut";
+  if (omistaja != null) {
+    toimiala = omistaja.prop("Toimiala");
+    if (omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") kansionimi = "Ulkoiset";
+      else if (toimiala != null && toimiala != "") kansionimi = toimiala;
+  }
+  console.log(element + " -> " + ylakansio + " / " + kansionimi);
+  kansio = $("#"+ylakansio.id).children("folder."+kansionimi).first();
+  if (kansio == null) {
+    kansio = ylakansio.createFolder(kansionimi);
+  }
+  kansio.add(element);
+});
+
+console.log("... tietojärjestelmät järjestetty kansioihin.");
+

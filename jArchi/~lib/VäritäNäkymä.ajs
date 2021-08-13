@@ -1,0 +1,93 @@
+﻿/*
+ * Tämä skripti värittää näkymässä näkyvät Espoon tiedonhallintamalliin sisältyvät elementit niiden laatua kuvaavin värein. 
+ * Lisäksi asetetaan nimiketekstin muodostumissääntö ("Label Expression").
+ */
+
+console.log("Aletaan värittää näkymää " + varitettavaNakyma);
+
+lisuke = "${property:Infotieto}";
+if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prosesseja} pros., ${property:_Liittymiä} liitt.)\n"
+
+$("#"+varitettavaNakyma.id).children("element").each(function(viewelem) {
+  if (fth(viewelem)) {
+    if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0) viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:_Omistaja}, ${property:Kriittisyys}]");
+      else viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:_Omistaja}]");
+    if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
+      viewelem.fontStyle = "bold";
+    }
+  }
+});
+
+// Prosessit
+
+$("#"+varitettavaNakyma.id).children("business-process").each(function(obj) {
+  if (fth(obj)) {
+    _aliprosessit = $("#"+obj.concept.id).inRels("specialization-relationship").sourceEnds("business-process").filter(fth);
+    if (_aliprosessit.size() > 0) {
+      obj.fillColor = "#ffff66";  // prosessilla on aliprosesseja
+    } else obj.fillColor = "#ffee66"; // prosessilla ei enää aliprosesseja
+  } else obj.fillColor = null;
+});
+
+// Tietovarannot
+
+$("#"+varitettavaNakyma.id).children("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function(obj) {
+  if (!fth(obj)) obj.fillColor = null;
+  else if (obj.concept.prop("Virallinen") == "F") {
+    obj.fillColor = "#ff6633";
+  } else {
+    _omistaja = $("#"+obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
+    if (_omistaja) {
+      if (_omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") obj.fillColor = "#ff9999";  // ulkoinen
+        else obj.fillColor = "#ff9933"; // tavallinen oma tietovaranto
+    } else obj.fillColor = "#ff0000"; // omistaja puuttuu!
+  }
+});
+
+// Tietojärjestelmät
+
+$("#"+varitettavaNakyma.id).children("application-component").filter(fth).each(function(obj) {
+  if (!fth(obj)) obj.fillColor = null;
+  else {
+    if (obj.concept.prop("Virallinen") == "F") {
+      obj.fillColor = "#9966ff"  
+    } else {
+      _omistaja = $("#"+obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
+      if (_omistaja) {
+          if (obj.prop("Järjestelmäsalkku ID")) {
+            if (varitettavaNakyma.prop("_Järjestelmäkartta") && obj.prop("_Prosesseja") == 0) obj.fillColor = "#99cccc";
+              else obj.fillColor = "#99ccff";  // normaali järjestelmäsalkussa olevan väri
+            if (parseInt(obj.prop("Järjestelmäsalkku ID")) < 0) {
+              // poistunut salkusta
+              obj.fontColor = "#ff0000";
+              obj.fontStyle = "bold";
+            }
+          } else obj.fillColor = "#6699ff"; // ei salkussa
+      } else if (obj.prop("_JärjestelmäsalkunVapaateksti") == "1") obj.fillColor = "#9999cc";
+      else obj.fillColor = "#ff0099"; // omistaja puuttuu!
+      if (obj.prop("Elinkaaren vaihe") == "Poistettu") obj.fontColor = "#ff0000";
+    }
+  }
+});
+
+
+// Organisaatiot
+
+$("#"+varitettavaNakyma.id).children("business-actor").filter(fth).each(function(obj) {
+  if (!fth(obj)) obj.fillColor = null;
+  else if (obj.prop("Sisäinen/ulkoinen") != "ulkoinen") {
+    obj.fillColor = "#cccccc"; // sisäinen
+  } else {
+    obj.fillColor = "#cccc99"; // ulkoinen
+  }
+});
+
+// Viivan väri
+
+$("#"+varitettavaNakyma.id).children("relationship").each(function(rel) {
+  if (fth(rel.source) && fth(rel.target)) {
+    rel.lineColor = "#000099";
+    if (rel.source.type == "application-component" && rel.target.type == "application-component")
+      rel.setLabelExpression("${name}${property:Epävarmuus}")
+  } else rel.lineColor = null;
+});
