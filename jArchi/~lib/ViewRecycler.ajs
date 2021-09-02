@@ -10,6 +10,8 @@ function clearProperties(visualObj) {
   var props = visualObj.prop();
   if (props == null) return;
   for (var i = 0; i < props.length; i++) {
+    if (props[i] == "_ObjektiTunniste") continue;  // Let's not empty the object identifier
+    // console.log("Emptying visual object " + visualObj + " property " + props[i]);
     visualObj.removeProp(props[i]);
   }
 }
@@ -72,13 +74,14 @@ function createOrRecycleArchimateView(existing, name, folder, replaceOld) {
         if (obj.prop("_ObjektiTunniste")) {
           viewObj.objs[obj.prop("_ObjektiTunniste")] = obj;
         } else {
-          console.log("- poistetaan näkymäobjekti " + obj);
+          // console.log("- removing view object " + obj);
           obj.delete();
         }
       }
     });
     clearProperties(viewObj.view);
     viewObj.view.name = name;
+    folder.add(viewObj.view);
   } else {
     viewObj.view = model.createArchimateView(name, folder);
   }
@@ -89,6 +92,7 @@ function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
   var curObj = viewObj.objs[objTunniste];
   //console.log(curObj);
   if (curObj && curObj.type != type) {
+    //console.log("Removing wrong type of object " + curObj);
     curObj.delete();
     curObj = null;
   }
@@ -101,6 +105,7 @@ function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
     delete viewObj.objs[objTunniste];
   } else {
     curObj = viewObj.view.createObject(type, x, y, width, height);
+    //console.log("Created object anew " + curObj);
     curObj.prop("_ObjektiTunniste", objTunniste);
   }
   return curObj;

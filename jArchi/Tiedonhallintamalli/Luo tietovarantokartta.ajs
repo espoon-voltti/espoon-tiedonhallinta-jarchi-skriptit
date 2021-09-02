@@ -15,10 +15,7 @@ var tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintam
 if (tiedonhallintamalliFolder == null) {
   tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
 }
-var tietovarannotFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tietovarannot").first();
-if (tietovarannotFolder == null) {
-  tietovarannotFolder = tiedonhallintamalliFolder.createFolder("Tietovarannot");
-}
+var tietovarannotFolder = tiedonhallintamalliFolder;
 
 var toimialaMap = {};
 var varantoMap = {}
@@ -33,7 +30,7 @@ relaatiot.each(function (rel) {
   var varanto = rel.target;
   var toimiala = "Muut";
   var toimialaOrg;
-  var sortorder = 980;
+  var sortorder = 9900;
   if (org.prop("Toimiala")) {
     toimiala = org.prop("Toimiala");
     toimialaOrg = toimialaOrganisaatio(toimiala);
@@ -41,7 +38,7 @@ relaatiot.each(function (rel) {
   }
   if (org.prop("Sisäinen/ulkoinen") == "ulkoinen") {
     toimiala = "Ulkoiset";
-    sortorder = 990;
+    sortorder = 9800;
   }
   if (!toimialaMap[toimiala]) {
     toimialaMap[toimiala] = {};
@@ -81,8 +78,8 @@ juoksevay += notekorkeus + kuviovaliy;
 var toimialalista = [];
 for (var toimiala in toimialaMap) toimialalista.push(toimiala);
 toimialalista.sort(function (left, right) { 
-  if (toimialaMap[left].sortorder > toimialaMap[right].sortorder) return 1;
-  if (toimialaMap[left].sortorder < toimialaMap[right].sortorder) return -1;
+  if (parseInt(toimialaMap[left].sortorder) > parseInt(toimialaMap[right].sortorder)) return 1;
+  if (parseInt(toimialaMap[left].sortorder) < parseInt(toimialaMap[right].sortorder)) return -1;
   return 0;
 });
 

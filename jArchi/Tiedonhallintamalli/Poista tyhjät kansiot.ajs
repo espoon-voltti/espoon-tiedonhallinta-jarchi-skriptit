@@ -1,0 +1,35 @@
+﻿/*
+ */
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+
+function kasitteleKansio(kansio) {
+  $("#" + kansio.id).children().each(function (elem) {
+    if (elem.type == 'folder') {
+      kasitteleKansio(elem);
+    }
+  });
+  if ($("#" + kansio.id).children().size() == 0) {
+    console.log("- poistetaan tyhjä kansio " + kansio);
+    kansio.delete();
+  }
+}
+
+console.show();
+console.log("> Poistetaan valittujen kansioiden tyhjiä alikansioita...");
+
+$(selection).each(function (elem) {
+  if (elem.type != 'folder') {
+    console.error("Valittuna voi olla vain kansioita. " + elem + " ei ole kansio.");
+    exit();
+  }
+});
+
+$(selection).each(function (elem) {
+  kasitteleKansio(elem);
+});
+
+console.log("> Valmis");
+console.log();
+

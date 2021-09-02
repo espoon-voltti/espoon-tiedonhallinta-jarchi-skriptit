@@ -74,10 +74,10 @@ $(document).ready(function() {
 			$(this).find(' > i').addClass('glyphicon-triangle-right').removeClass('glyphicon-triangle-bottom');
 		} else {
 			// START SORT
-			$(this).parent('li.parent_li').find(' > ul').each(function(index){
+			/* DISABLOITU ESPOOSSA $(this).parent('li.parent_li').find(' > ul').each(function(index){
 				$(this).children('li.tree-folder').sort(strcmp).appendTo($(this));
 				$(this).children('li.tree-element').sort(strcmp).appendTo($(this));
-			});
+			}); */
 			// END SORT
 			children.show('fast');
 			$(this).find(' > i').addClass('glyphicon-triangle-bottom').removeClass('glyphicon-triangle-right');
