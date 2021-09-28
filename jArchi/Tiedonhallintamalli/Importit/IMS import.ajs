@@ -11,27 +11,63 @@
 
 "use strict";
 
+/* var tunnisteOverride = {
+  18324: "O5.1",
+  jne.
+}; */
+
 var tunnistePattern = /^(([OT]|Y[AJP]?)?\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/;
-var syotePattern = /(([OT]|Y[AJP]?)?\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/g;
+var syotePattern = /(([OT]|Y[AJP]?)\d+(\.\d+)+)($|[^0-9\.])/g;   // ei tunnista toimialatasoa (pitää olla vähintään kaksitasoinen x.y) ja kirjainetuliite pitää löytyä, ettei tule virhematcheja
 
 var imskentat = {
   "Nimi": null,  // käsitellään erikseen
-  "Id": null,  // käsitellään erikseen
+  "Id": "IMS ID",  // käsitellään myös erikseen
   "Yläprosessin id": null,  // käsitellään erikseen
-  "Linkki": null,  // käsitellään erikseen
   "Tunniste tiedonhallintamallissa *": null,  // käsitellään erikseen
   "Prosessin kuvaus *": null,  // käsitellään erikseen
   "Omistava tulosyksikkö **": null,  // käsitellään erikseen
+  "Linkki": null, // käsitellään erikseen
 
   "Lopputuotos (palvelu/asiakirja) *": "Prosessissa syntyvä lopputuotos",
   "Prosessi saa syötteitä *": "Saa syötteitä",
   "Prosessi tuottaa syötteitä *": "Tuottaa syötteitä",
-  "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto"  // käsitellään erikseen
+  "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto"
 };
 
 function siisti(arvo) {
   var patt = /\r?\n/g;
   return arvo.trim().replace(patt, ", ");
+}
+
+var HERJA_KONSOLIINFO = 1;
+var HERJA_KONSOLIVIRHE = 2;
+var HERJA_VAROITUSIKKUNA = 3;
+var HERJA_OHITETAANKOIKKUNA = 4;
+
+function herjaa(huomioLista, lajiteksti, yksilointi, imsId, tunniste, imsNimi, archiPros, kasittely) {
+  if (kasittely === undefined) kasittely = HERJA_KONSOLIVIRHE;
+  var herja = "[Prosessi " + imsId + ": " + imsNimi + "] " + lajiteksti + (yksilointi ? " " + yksilointi : "") + " (" + tunniste + " / " + archiPros + ")";
+  var huomiorivi = { "Id": imsId, "Tunniste": tunniste, "IMS-nimi": imsNimi, "Archi-nimi": archiPros, "Huomio": lajiteksti, "Yksilöinti": yksilointi };
+  if (huomioLista) huomioLista.push(huomiorivi);
+  switch (kasittely) {
+    case HERJA_KONSOLIINFO:
+      console.log(herja);
+      break;
+    case HERJA_KONSOLIVIRHE:
+      console.error(herja);
+      break;
+    case HERJA_VAROITUSIKKUNA:
+      console.error(herja);
+      window.alert(herja);
+      break;
+    case HERJA_OHITETAANKOIKKUNA:
+      var result = window.confirm(herja + "; Ohitetaanko?");
+      var resultText = result ? " (Ohitetaan)" : " (Käsitellään silti)";
+      console.error(herja + resultText);
+      huomiorivi["Yksilöinti"] += resultText;
+      return result;
+  }
+  return true;
 }
 
 console.show();
@@ -60,24 +96,23 @@ $("business-actor").filter(fth).each(function(org) {	// sitten IMS-aliaksin
 
 var huomioLista = [];
 
-var prosImsIdMap = {};
+var prosArchiIdMap = {};
 var kaikkiProsImsIdMap = {};
 var prosTunnisteMap = {};
 var prosDuplTunnisteMap = {};
+var prosRiviImsIdMap = {};
 
-$("business-process").filter(fth).each(function(pros) {
+$("business-process").filter(fth).each(function (pros) {
+  prosArchiIdMap[pros.id] = pros;
   var imsid = pros.prop("IMS ID");
   if (imsid > 0) {
-    prosImsIdMap[imsid] = pros;
     kaikkiProsImsIdMap[imsid] = pros;
   }
   var tunniste = pros.prop("Tunniste");
   if (tunniste) tunniste = tunniste.trim();
   if (tunniste) {
     if (prosTunnisteMap[tunniste]) {
-      var herja = "*** Tunniste \"" + tunniste + "\" löytyy Archista useammalla prosessilla. Tarkista tilanne."
-      console.error(herja);
-      huomioLista.push({ "Id": imsid, "Tunniste": tunniste, "IMS-nimi": pros.name, "Huomio": herja });
+      herjaa(huomioLista, "*** Tunniste löytyy Archista useammalla prosessilla. Tarkista tilanne.", tunniste, imsid, tunniste);
     }
     prosTunnisteMap[tunniste] = pros;
   }
@@ -136,11 +171,16 @@ for (var j = 0; j < csvMeta.fields.length; j++) {
 var valitutRivit = [];
 var nykyProsMap = {};
 
-for (var i = 0; i < csvData.length - 1; i++) {
+for (var i = 0; i < csvData.length; i++) {
   var prosRivi = csvData[i];
   var imsId = prosRivi["Id"];
+  if (!imsId) {
+    console.log("Ohitettiin tyhjä rivi rivllä nro " + i);
+    continue;
+  }
   var tunniste = prosRivi["Tunniste tiedonhallintamallissa *"];
   if (tunniste) tunniste = tunniste.trim();
+  /* if (!tunniste && tunnisteOverride[imsId]) tunniste = tunnisteOverride[imsId]; */
   var nimi = prosRivi["Nimi"];
 
   var tunnisteNimessa = null;
@@ -148,50 +188,48 @@ for (var i = 0; i < csvData.length - 1; i++) {
   if (match) tunnisteNimessa = match[1];
 
   var herja = null;
-  var nykyPros = prosMap[imsId];
+  var yksilointi = null;
+  var nykyPros = kaikkiProsImsIdMap[imsId];
   if (!tunniste && nykyPros) {   // ei tunnistetta, eli ei merkitty tiedonhallintamalliin kuuluvaksi
-    herja = "** Prosessilla ei tunnistetta, mutta vastine löytyy Archista IMS ID:llä: " + nykyPros + " (ohitetaan)");
+    herja = "** Prosessilla ei tunnistetta, mutta vastine löytyy Archista IMS ID:llä (ohitetaan)";
+    yksilointi = nykyPros;
   } else if (!tunniste && tunnisteNimessa) {
     herja = "** Tunniste puuttuu, mutta nimen alku näyttää tunnisteelta (ohitetaan)";
   } else if (!tunniste) {
     continue;  // ei ilmeisesti kuulu tiedonhallintamalliin, mennään eteenpäin
   } else if (!tunnistePattern.exec(tunniste) || tunniste != tunnisteNimessa) {
-    herja2 = "** Prosessin tunniste ei ole oikean muotoinen tai tunniste ei vastaa nimeä";
-    console.error(herja2);
-    if (window.confirm(herja2 + ": " + imsId + " " + tunniste + " / " + nimi + ". Ohitetaanko?")) {
-      herja += " (ohitetaan)";
-    } else {
-      herja += " (jatketaan)";
-      console.error(herja);
-      huomioLista.push({ "Id": imsid, "Tunniste": tunniste, "IMS-nimi": pros.name, "Archi-nimi": nykyPros, "Huomio": herja });
-      herja = null;
-    }
+    var ohitetaan = herjaa(huomioLista, "** Prosessin tunniste ei ole oikean muotoinen tai tunniste ei vastaa nimeä", tunniste, imsId, tunniste, nimi, nykyPros, HERJA_OHITETAANKOIKKUNA);
+    if (ohitetaan) continue;
+    nimi = "(" + tunniste + "/VIRHEELLINEN) " + nimi;
+    prosRivi["Nimi"] = nimi;
   }
 
   if (!herja && prosDuplTunnisteMap[tunniste]) {
     var prosRivi2 = prosDuplTunnisteMap[tunniste];
-    herja = "** Prosessi tulee uudestaan DUPLIKAATTINA prosessille " + prosRivi2["Id"] + " " + prosRivi2["Tunniste tiedonhallintamallissa *"] + " / " + prosRivi2["Nimi"] + " (ohitetaan)";
+    herja = "** Prosessi tulee uudestaan DUPLIKAATTINA prosessille (ohitetaan)";
+    yksilointi = prosRivi2["Id"] + " " + prosRivi2["Tunniste tiedonhallintamallissa *"] + " / " + prosRivi2["Nimi"];
   }
 
   if (herja) {
-    console.error(herja + ": " + imsId + " " + tunniste + " / " + nimi + " / " + nykyPros);
-    huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
+    herjaa(huomioLista, herja, yksilointi, imsId, tunniste, nimi, nykyPros);
     continue;
   }
 
   if (!nykyPros) {
     nykyPros = prosTunnisteMap[tunniste];
-    if (nykyPros) console.log("Prosessia ei löytynyt IMS ID:n perusteella. Löydettiin tunnisteen perusteella prosessille " + imsId + ": " + nimi + " vastine Archista: " + nykyPros);
+    if (nykyPros) {
+      herjaa(huomioLista, "Prosessia ei löytynyt IMS ID: n perusteella. Löydettiin tunnisteen perusteella prosessille vastine Archista", null, imsId, tunniste, nimi, nykyPros, HERJA_KONSOLIINFO);
+      kaikkiProsImsIdMap[imsId] = nykyPros;
+    }
   }
 
   if (!nykyPros && $("business-process." + nimi).filter(fth).size() > 0) {
     var herja = "*** Prosessi nimeltä " + nimi + " löytyi jo Archista mutta tuli uutena IMS importissa. Luodaan duplikaatti, tämä pitää korjata käsin.";
-    console.error(herja);
-    huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
-    window.alert(herja);
+    herjaa(huomioLista, "Prosessi löytyi jo Archista mutta tuli uutena IMS importissa. Luodaan duplikaatti, tämä pitää korjata käsin.", null, imsId, tunniste, nimi, nykyPros, HERJA_VAROITUSIKKUNA);
   }
 
   prosDuplTunnisteMap[tunniste] = prosRivi;
+  prosRiviImsIdMap[imsId] = prosRivi;
   valitutRivit.push(prosRivi);
   if (nykyPros) nykyProsMap[imsId] = nykyPros;
 }
@@ -201,24 +239,28 @@ var ajankohta = new Date();
 var aikaleima = ajankohta.format("isoDateTime");
 var muuttuneetPros = {};
 
-for (var i = 0; i < valitutRivit.length - 1; i++) {
+for (var i = 0; i < valitutRivit.length; i++) {
   var prosRivi = valitutRivit[i];
   var imsId = prosRivi["Id"];
   var tunniste = siisti(prosRivi["Tunniste tiedonhallintamallissa *"]);
+  if (!tunniste && tunnisteOverride[imsId]) tunniste = tunnisteOverride[imsId];
   var nimi = siisti(prosRivi["Nimi"]);
   var nykyPros = nykyProsMap[imsId];
 
   if (nykyPros) {
-    delete prosMap[imsId];   // poistetaan prosMapista, jotta sinne jää lopuksi ne mitä ei enää saatu IMS:stä
+    delete prosArchiIdMap[nykyPros.id];   // poistetaan prosMapista, jotta sinne jää lopuksi ne mitä ei enää saatu IMS:stä
   } else {
     nykyPros = model.createElement("business-process", nimi);
     nykyPros.prop("_Tiedonhallintamalli", "1");
     nykyPros.prop("Tunniste", tunniste);
     nykyPros.prop("IMS ID", imsId);
-    nykyPros.prop("IMS-linkki", prosRivi["Linkki"]);
+    nykyPros.prop("IMS-linkki", imsUrl.replace("[IMSID]", imsId));
     nykyPros.prop("_Päivitetty", aikaleima);
+    nypyPros.prop("_TunnistePäivitetty", aikaleima);
+    nykyPros.prop("_NimiPäivitetty", aikaleima);
     muuttuneetPros[nykyPros.id] = "1";
-    kaikkiProsImsIdMap[imsid] = nykyPros;
+    kaikkiProsImsIdMap[imsId] = nykyPros;
+    nykyProsMap[imsId] = nykyPros;
     console.log("+ Lisätty uusi prosessi " + nykyPros);
   }
 }
@@ -226,12 +268,14 @@ console.log("> Rivit käsitelty toisen kerran");
 
 var syoteLahdeMap = {};
 
-for (var i = 0; i < valitutRivit.length - 1; i++) {
+for (var i = 0; i < valitutRivit.length; i++) {
   var prosRivi = valitutRivit[i];
   var imsId = prosRivi["Id"];
   var tunniste = siisti(prosRivi["Tunniste tiedonhallintamallissa *"]);
+  if (!tunniste && tunnisteOverride[imsId]) tunniste = tunnisteOverride[imsId];
   var nimi = siisti(prosRivi["Nimi"]);
   var nykyPros = nykyProsMap[imsId];
+  if (!nykyPros) console.error("NYKYPROS EI LÖYDY !!!!!!!!! " + imsId + " " + nimi + " - miten tähän on tultu?!");
 
   var muutos = {};
   var vanha = {};
@@ -240,21 +284,29 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
     vanha["Nimi"] = nykyPros.name;
     muutos["Nimi"] = nimi;
     nykyPros.name = nimi;
+    nykyPros.prop("_NimiPäivitetty", aikaleima);
   }
   if (tunniste != nykyPros.prop("Tunniste")) {
-    var herja = "Tunniste muuttuu prosessilla " + nykyPros + ", vanha: \"" + nykyPros.prop("Tunniste") + "\", uusi: \"" + tunniste + "\"";
-    console.error(herja);
-    huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
-    window.alert(herja);
+    herjaa(huomioLista, "PROSESSIN TUNNISTE MUUTTUU", "Vanha: \"" + nykyPros.prop("Tunniste") + "\", uusi: \"" + tunniste + "\"",
+      imsId, tunniste, nimi, nykyPros, HERJA_VAROITUSIKKUNA);
     vanha["Tunniste"] = nykyPros.prop("Tunniste");
     muutos["Tunniste"] = tunniste;
     nykyPros.prop("Tunniste", tunniste);
+    nypyPros.prop("_TunnistePäivitetty", aikaleima);
+    var vanhatunniste = nykyPros.prop("_VanhaTunniste") ? nykyPros.prop("_VanhaTunniste") + "; " : "";
+    nykyPros.prop("_VanhaTunniste", vanhatunniste + vanha["Tunniste"]);
   }
   var kuvaus = siisti(prosRivi["Prosessin kuvaus *"]);
   if (kuvaus != nykyPros.documentation) {
     vanha["Kuvaus"] = nykyPros.documentation;
     muutos["Kuvaus"] = kuvaus;
     nykyPros.documentation = kuvaus;
+  }
+  var imsLinkki = imsUrl.replace("[IMSID]", imsId);
+  if (imsLinkki != nykyPros.prop("IMS-linkki")) {
+    vanha["IMS-linkki"] = nykyPros.prop("IMS-linkki");
+    muutos["IMS-linkki"] = imsLinkki;
+    nykyPros.prop("IMS-linkki", imsLinkki);
   }
   for (var kentta in imskentat) {
     if (imskentat[kentta]) {   // käsitellään tässä vain ne, joille ei ole erityiskäsittelyä
@@ -279,7 +331,22 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
   var nykyOmistajaRel = $("#"+nykyPros.id).inRels("association-relationship.vastaa").first();
   var nykyOmistaja = null;
   if (nykyOmistajaRel) nykyOmistaja = $("#"+nykyOmistajaRel.id).sourceEnds("business-actor").first();
-  var uusiOmistaja = orgMap[prosRivi["Prosessin omistaja *"]];
+  var uusiOmistaja = orgMap[prosRivi["Omistava tulosyksikkö **"].trim()];
+  if (!uusiOmistaja) {
+    // jos omistavaa tulosyksikköä ei annettu tällä tasolla, käydään läpi yläprosessit kunnes (jos) löydetään
+    var hakuImsId = imsId;
+    var hakuTasoja = 20; // varmistetaan ettei jäädä loputtomaan silmukkaan
+    while (!uusiOmistaja && hakuImsId && hakuTasoja-- > 0) {
+      hakuImsId = prosRiviImsIdMap[hakuImsId]["Yläprosessin id"];
+      var ylaOmistajaRivi = prosRiviImsIdMap[hakuImsId];
+      if (!ylaOmistajaRivi) {
+        herjaa(huomioLista, "Prosessin omistajatietoa haettaessa törmättiin ongelmaan ettei yläprosessia löydy tiedonhallintamalliin kuuluviksi merkittyjen rivien joukosta",
+          "Yläprosessi " + hakuImsId, imsId, tunniste, nimi, nykyPros);
+        break;
+      }
+      uusiOmistaja = orgMap[ylaOmistajaRivi["Omistava tulosyksikkö **"].trim()];
+    }
+  }
   if (uusiOmistaja) {
     if (!nykyOmistaja || nykyOmistaja.id != uusiOmistaja.id) { // omistajatieto eroaa
       vanha["Omistaja"] = nykyOmistaja;
@@ -287,25 +354,58 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
       model.createRelationship("association-relationship", "vastaa", uusiOmistaja, nykyPros);
       nykyPros.prop("_Omistaja", uusiOmistaja.name);
       muutos["Omistaja"] = uusiOmistaja;
-      console.log("VAIHDETAAN PROSESSIN " + nykyPros.name + " OMISTAJAKSI " + uusiOmistaja.name);
+      console.log("VAIHDETAAN PROSESSIN " + nykyPros.name + " OMISTAJAKSI " + uusiOmistaja.name + " (aiempi oli " + nykyOmistaja + ")");
     } 
   } else {
-    var herja = "Prosessin " + nykyPros.name + " IMS omistajatietoa vastaavaa organisaatiota ei löydy (" + prosRivi["Prosessin omistaja *"] + "). Omistajatieto jätetään asettamatta/muuttamatta (nykyisin " + nykyOmistaja + "). Korjaa puute ja aja import uudelleen.";
-    huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
-    console.error(herja);
+    herjaa(huomioLista, "Prosessin IMS omistajatietoa vastaavaa organisaatiota ei löydy. Omistajatieto jätetään asettamatta/muuttamatta. Korjaa puute ja aja import uudelleen.",
+      "IMS-tieto: " + prosRivi["Prosessin omistaja *"] + ", nykyinen omistaja " + nykyOmistaja,
+      imsId, tunniste, nimi, nykyPros);
   }
 
-  var kansio = prosessitFolder;
-  var imsYlaId = prosRivi["Yläprosessin id"];
-  if (imsYlaId > 1) {
-    var ylaPros = kaikkiProsMap[imsYlaId];
-    if (ylaPros) {
-      var ylaKansio = $("#"+ylaPros.id).parent("folder").first();
-      kansio = ylaKansio.children("folder." + ylaPros.name);
+  var maxKansiot = 20;
+
+  var varmistaKansio = function (tamaImsId) {
+    if (!(maxKansiot-- > 0)) return null;  // estetään ikuinen silmukka jos datassa virhe
+    var tamaProsRivi = prosRiviImsIdMap[tamaImsId];
+    if (!tamaProsRivi) {
+      herjaa(huomioLista, "tamaProsRivi NULL", tamaImsId, imsId, tunniste, nimi, nykyPros, HERJA_VAROITUSIKKUNA);
+      return null;
+    }
+    var imsYlaId = tamaProsRivi["Yläprosessin id"];
+    //console.log("Selvitetään kansiota, tamaImsId=" + tamaImsId + ", imsYlaId=" + imsYlaId);
+    if (imsYlaId > 1) {
+      var ylaKansio = varmistaKansio(imsYlaId);
+      if (!ylaKansio) return null;
+      var ylaPros = kaikkiProsImsIdMap[imsYlaId];
+      if (!ylaPros) return null;
+      var kansio = $("#" + ylaKansio.id).children("folder." + ylaPros.name).first();
       if (kansio == null) {
         kansio = ylaKansio.createFolder(ylaPros.name);
         console.log("  - Luotiin kansio " + kansio + " kansion " + ylaKansio + " alle");
       }
+      return kansio;
+    } else if (imsYlaId == 1) {
+      return prosessitFolder;
+    }
+    return null;
+  }
+
+  var kansio = varmistaKansio(imsId);
+  if (!kansio) {
+    herjaa(huomioLista, "*** Prosessin oikeaa kansiota ei pystytty selvittämään, viedään kansioon ORVOT.", "Yläprosessin IMS-id " + imsYlaId,
+      imsId, tunniste, nimi, nykyPros);
+    kansio = $("#" + prosessitFolder.id).children("folder.ORVOT").first();
+    if (kansio == null) {
+      kansio = prosessitFolder.createFolder("ORVOT");
+    }
+  }
+  //if (!window.confirm(kansio)) exit();
+  kansio.add(nykyPros);
+
+  var imsYlaId = prosRivi["Yläprosessin id"];
+  if (imsYlaId > 1) {
+    var ylaPros = kaikkiProsImsIdMap[imsYlaId];
+    if (ylaPros) {
       var loytyi = false;
       $("#" + nykyPros.id).outRels("specialization-relationship").each(function (rel) {
         if (rel.target.id == ylaPros.id) loytyi = true;
@@ -318,18 +418,8 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
         model.createRelationship("specialization-relationship", "", nykyPros, ylaPros);
         muutos["Yläprosessi"] = ylaPros;
       }
-    } else {
-      var herja = "*** Prosessin " + nykyPros + " yläprosessia ei löytynyt, viedään kansioon ORVOT.";
-      console.error(herja);
-      huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
-      console.warning(herja);
-      kansio = $("#"+prosessitFolder.id).children("folder.ORVOT").first();
-      if (kansio == null) {
-        kansio = prosessitFolder.createFolder("ORVOT");
-      }
     }
   }
-  kansio.add(nykyPros);
 
   var syoteteksti = nykyPros.prop("Saa syötteitä");
   while ((match = syotePattern.exec(syoteteksti)) !== null) {
@@ -338,9 +428,8 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
       if (!syoteLahdeMap[syotePros.id]) syoteLahdeMap[syotePros.id] = {};
       syoteLahdeMap[syotePros.id][nykyPros.id] = nykyPros;
     } else {
-      var herja = "Prosessille merkitty saatava syöte " + match[1] + " jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan)";
-      console.log(herja);
-      huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
+      herjaa(huomioLista, "Prosessille merkitty saatava syöte, jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan).", match[1],
+        imsId, tunniste, nimi, nykyPros, HERJA_KONSOLIINFO);
     }
   }
   syoteteksti = nykyPros.prop("Tuottaa syötteitä");
@@ -350,9 +439,8 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
       if (!syoteLahdeMap[nykyPros.id]) syoteLahdeMap[nykyPros.id] = {};
       syoteLahdeMap[nykyPros.id][syotePros.id] = syotePros;
     } else {
-      var herja = "Prosessille merkitty tuotettava syöte " + match[1] + " jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan)";
-      console.log(herja);
-      huomioLista.push({ "Id": imsId, "Tunniste": tunniste, "IMS-nimi": nimi, "Archi-nimi": nykyPros, "Huomio": herja });
+      herjaa(huomioLista, "Prosessille merkitty tuotettava syöte, jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan).", match[1],
+        imsId, tunniste, nimi, nykyPros, HERJA_KONSOLIINFO);
     }
   }
 
@@ -363,7 +451,7 @@ for (var i = 0; i < valitutRivit.length - 1; i++) {
   if (muutoksia) {
     muuttuneetPros[nykyPros.id] = "1";
     nykyPros.prop("_Päivitetty", aikaleima);
-    console.log("- Prosessin " + nykyPros.name + " tietoja muuttunut:");
+    console.log("* Prosessin " + nykyPros.name + " tietoja muuttunut:");
     for (var muuttunut in muutos) {
       console.log("  - " + muuttunut + " muuttunut: \"" + vanha[muuttunut] + "\" -> \"" + muutos[muuttunut] + "\"");
     }
@@ -377,7 +465,7 @@ console.log("> Käsitellään syötteet");
 for (var lahdeProsId in syoteLahdeMap) {
   var lahdePros = $("#" + lahdeProsId).first();
   var kohdeMap = syoteLahdeMap[lahdeProsId];
-  lahdePros.outRels("flow-relationship.syöte").each(function (rel) {
+  $("#"+lahdeProsId).outRels("flow-relationship.syöte").each(function (rel) {
     if (kohdeMap[rel.target.id]) {
       delete kohdeMap[rel.target.id];
     } else {
@@ -386,24 +474,24 @@ for (var lahdeProsId in syoteLahdeMap) {
     }
   });
   for (var puuttuvaId in kohdeMap) {
-    var kohdePros = $("#" + kohdeMap[puuttuvaId]).first();
+    var kohdePros = kohdeMap[puuttuvaId];
     console.log("Lisätään uusi syöterelaatio prosessista " + lahdePros.name + " prosessiin " + kohdePros.name);
     model.createRelationship("flow-relationship", "syöte", lahdePros, kohdePros);
   }
 }
 
 console.log("> Käsitellään mahdolliset poistuneet prosessit");
-for (var poistunutId in prosMap) {  // Jäljellä vain salkussa olleet joita ei enää näy!
-  var poistunutPros = prosMap[poistunutId];
-  console.log("PROSESSI " + poistunutPros.name + " POISTUNUT IMS:STÄ, MERKITÄÄN POISTUNEEKSI");
-  poistunutPros.name = poistunutPros.name + " (POISTUNUT IMS:STÄ)";
+for (var poistunutId in prosArchiIdMap) {  // Jäljellä vain salkussa olleet joita ei enää näy!
+  var poistunutPros = prosArchiIdMap[poistunutId];
+  herjaa(huomioLista, "PROSESSI POISTUNUT IMS:STÄ, MERKITÄÄN POISTUNEEKSI", poistunutPros, null, null, null, null, HERJA_KONSOLIINFO);
+  if (!poistunutPros.name.endsWith("(POISTUNUT IMS:STÄ)")) poistunutPros.name = poistunutPros.name + " (POISTUNUT IMS:STÄ)";
   poistunutPros.prop("_Poistuneeksi merkitty", aikaleima);
   poistunutPros.prop("_Päivitetty", aikaleima);
-  /*  var kansio = $("#"+prosessitFolder.id).children("folder.POISTUNEET").first();
+  var kansio = $("#"+prosessitFolder.id).children("folder.POISTUNEET").first();
   if (kansio == null) {
     kansio = prosessitFolder.createFolder("POISTUNEET");
   }
-  kansio.add(poistunutPros); */
+  kansio.add(poistunutPros);
 }
 
 // TODO: pitäisi käydä läpi prosessihierarkian alikansiot ja poistaa tyhjät
@@ -418,11 +506,12 @@ if (huomioLista.length > 0) {
     "Tunniste",
     "IMS-nimi",
     "Archi-nimi",
-    "Huomio"
+    "Huomio",
+    "Yksilöinti"
   ];
   var exportFile = window.promptSaveFile({ title: "Viedään huomiot CSV:ksi", filterExtensions: ["*.csv"], fileName: "prosessien-huomiot-" + ajankohta.format("yyyymmddHHMMss") + ".csv" });
   if (exportFile) {
-    var outCSV = Papa.unparse({ fields: outCsvHeaders, data: outCsvData });
+    var outCSV = Papa.unparse({ fields: outCsvHeaders, data: huomioLista });
     $.fs.writeFile(exportFile, outCSV);
     console.log("> Tiedosto kirjoitettu");
   } else {
