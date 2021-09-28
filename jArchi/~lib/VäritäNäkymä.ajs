@@ -109,8 +109,13 @@ $("#"+varitettavaNakyma.id).children("business-actor").filter(fth).each(function
 
 $("#"+varitettavaNakyma.id).children("relationship").each(function(rel) {
   if (fth(rel.source) && fth(rel.target)) {
+    rel.setLabelExpression("");
     rel.lineColor = "#000099";
-    if (rel.source.type == "application-component" && rel.target.type == "application-component")
-      rel.setLabelExpression("${name}${property:Epävarmuus}")
+    if (rel.name && rel.type == "serving-relationship" && rel.target.type == "business-process" && (rel.source.type == "application-component" || rel.source.type == "product")) {
+      rel.setLabelExpression("${property:PIILOTETAAN}");  // tämän tarkoitus on piilottaa relaation nimen näkyminen kuvassa - nimi näkyy kuitenkin yhteydet-listauksessa
+      rel.lineColor = "#3366FF";
+    } else if (rel.source.type == "application-component" && rel.target.type == "application-component") {
+        rel.setLabelExpression("${name}${property:Epävarmuus}")
+    }
   } else rel.lineColor = null;
 });
