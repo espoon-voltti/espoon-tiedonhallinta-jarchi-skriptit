@@ -64,15 +64,18 @@ function createOrRecycleArchimateView(existing, name, folder, replaceOld) {
     $("#"+viewObj.view.id).children().each(function (obj) {
       if (obj.concept) {
         if (obj.type.indexOf("relationship") >= 0) {
-          viewObj.rels[obj.concept.id] = obj;
+          if (!viewObj.rels[obj.concept.id]) viewObj.rels[obj.concept.id] = [];
+          viewObj.rels[obj.concept.id].push(obj);
           //console.log("- Lisättiin relaatio id " + obj.concept.id);
         } else {
-          viewObj.elems[obj.concept.id] = obj;
+          if (!viewObj.elems[obj.concept.id]) viewObj.elems[obj.concept.id] = [];
+          viewObj.elems[obj.concept.id].push(obj);
           //console.log("- Lisättiin elementti id " + obj.concept.id);
         }
       } else {
         if (obj.prop("_ObjektiTunniste")) {
-          viewObj.objs[obj.prop("_ObjektiTunniste")] = obj;
+          if (!viewObj.objs[obj.prop("_ObjektiTunniste")]) viewObj.objs[obj.prop("_ObjektiTunniste")] = [];
+          viewObj.objs[obj.prop("_ObjektiTunniste")].push(obj);
         } else {
           // console.log("- removing view object " + obj);
           obj.delete();
@@ -90,6 +93,7 @@ function createOrRecycleArchimateView(existing, name, folder, replaceOld) {
 
 function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
   var curObj = viewObj.objs[objTunniste];
+  if (curObj) curObj = curObj.shift(); // otetaan taulukon ensimmäinen
   //console.log(curObj);
   if (curObj && curObj.type != type) {
     //console.log("Removing wrong type of object " + curObj);
@@ -102,7 +106,7 @@ function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
     clearProperties(curObj);
     clearAppearance(curObj);
     curObj.text = null;
-    delete viewObj.objs[objTunniste];
+    // delete viewObj.objs[objTunniste];
   } else {
     curObj = viewObj.view.createObject(type, x, y, width, height);
     //console.log("Created object anew " + curObj);
@@ -114,11 +118,12 @@ function createRecycledObject(viewObj, objTunniste, type, x, y, width, height) {
 function recycledViewAddElement(viewObj, element, x, y, width, height) {
   //console.log("kierrätetään elementtiä id " + element.id + " ja " + element.concept);
   var curObj = viewObj.elems[element.id];
+  if (curObj) curObj = curObj.shift(); // otetaan taulukon ensimmäinen
   if (curObj) {
     //console.log("Reusing element " + curObj);
     curObj.bounds = { "x": x, "y": y, "width": width, "height": height};
     clearAppearance(curObj);
-    delete viewObj.elems[element.id];
+    // delete viewObj.elems[element.id];  // ei tarvitse poistaa kun poistettiin jo taulukosta edellä shift-funktiolla
   } else {
     curObj = viewObj.view.add(element, x, y, width, height);
   }
@@ -134,6 +139,7 @@ function recycledViewAddRelationship(viewObj, relationship, sourceDiagramCompone
     console.error("targetDiagramComponent not defined, " + relationship + ": " + (relationship? relationship.source + " -> " + relationship.target : "null"));
   }
   var curObj = viewObj.rels[relationship.id];
+  if (curObj) curObj = curObj.shift(); // otetaan taulukon ensimmäinen
   // console.log(curObj + " " + (curObj? curObj.source + " -> " + curObj.target : "null"));
   if (curObj && ((sourceDiagramComponent.id != curObj.source.id) || (targetDiagramComponent.id != curObj.target.id))) {
     curObj.delete();
@@ -145,7 +151,7 @@ function recycledViewAddRelationship(viewObj, relationship, sourceDiagramCompone
     curObj.labelVisible = true;  // oletus?
     curObj.lineWidth = 1;  // oletus?
     clearAppearance(curObj);
-    delete viewObj.rels[relationship.id];
+    // delete viewObj.rels[relationship.id];  // hoitui jo edellä shift:llä
   } else {
     curObj = viewObj.view.add(relationship, sourceDiagramComponent, targetDiagramComponent);
   }
@@ -154,12 +160,12 @@ function recycledViewAddRelationship(viewObj, relationship, sourceDiagramCompone
 
 function recycledViewFinishRecycling(viewObj) {
   for (var objid in viewObj.rels) {
-    viewObj.rels[objid].delete();
+    for (var i = 0; i < viewObj.rels[objid].length; i++) viewObj.rels[objid][i].delete();
   }
   for (var objid in viewObj.elems) {
-    viewObj.elems[objid].delete();
+    for (var i = 0; i < viewObj.elems[objid].length; i++) viewObj.elems[objid][i].delete();
   }
   for (var objid in viewObj.objs) {
-    viewObj.objs[objid].delete();
+    for (var i = 0; i < viewObj.objs[objid].length; i++) viewObj.objs[objid][i].delete();
   }
 }
