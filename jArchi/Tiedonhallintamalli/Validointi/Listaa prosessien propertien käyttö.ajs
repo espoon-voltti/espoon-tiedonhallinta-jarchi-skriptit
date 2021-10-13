@@ -1,0 +1,33 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+
+console.log("> Listataan prosessien propertyjen käyttökertojen määrä");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("business-process").filter(fth).each(function (pros) {
+  var propkeys = pros.prop();
+  for (var i = 0; i < propkeys.length; i++) {
+    if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
+    propertymap[propkeys[i]]++;
+  }
+});
+
+var propnames = [];
+for (var propkey in propertymap) {
+  propnames.push(propkey);
+}
+propnames.sort();
+
+for (var i = 0; i < propnames.length; i++) {
+  console.log(propertymap[propnames[i]] + "\t" + propnames[i]);
+}
+
+console.log("> Valmis");
+console.log();
+

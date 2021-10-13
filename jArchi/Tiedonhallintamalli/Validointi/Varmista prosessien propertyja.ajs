@@ -1,0 +1,45 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+
+console.log("> Varmistetaan prosessien propertyjen olemassaolo ja nimeäminen");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+var poistettavat = ["Vastaava viranhaltija"];
+var uudelleennimettavat = {
+  "Asiakirjahallinnon tehtäväluokat": "_Asiakirjahallinnon tehtäväluokat",
+  "Tyyppi": "_Tyyppi"
+};
+var varmistettavat = ["Koskee asianhallintaa", "Koskee palvelua"];
+
+$("business-process").filter(fth).each(function (pros) {
+  for (var i = 0; i < poistettavat.length; i++) {
+    if (pros.prop(poistettavat[i]) !== null) {
+      console.log("- Poistetaan property " + poistettavat[i] + " prosessilta " + pros);
+      pros.removeProp(poistettavat[i]);
+    }
+  }
+
+  for (var propkey in uudelleennimettavat) {
+    if (pros.prop(propkey) !== null) {
+      console.log("- Nimetään property " + propkey + "->" + uudelleennimettavat[propkey] + " prosessilla " + pros);
+      pros.prop(uudelleennimettavat[propkey], pros.prop(propkey));
+      pros.removeProp(propkey);
+    }
+  }
+
+  for (var i = 0; i < varmistettavat.length; i++) {
+    if (pros.prop(varmistettavat[i]) === undefined) {
+      console.log("- Lisätään property " + varmistettavat[i] + " prosessille " + pros);
+      pros.prop(varmistettavat[i], "");
+    }
+  }
+});
+
+console.log("> Valmis");
+console.log();
+
