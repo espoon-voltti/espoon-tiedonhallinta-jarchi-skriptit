@@ -256,7 +256,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     nykyPros.prop("IMS ID", imsId);
     nykyPros.prop("IMS-linkki", imsUrl.replace("[IMSID]", imsId));
     nykyPros.prop("_Päivitetty", aikaleima);
-    nypyPros.prop("_TunnistePäivitetty", aikaleima);
+    nykyPros.prop("_TunnistePäivitetty", aikaleima);
     nykyPros.prop("_NimiPäivitetty", aikaleima);
     muuttuneetPros[nykyPros.id] = "1";
     kaikkiProsImsIdMap[imsId] = nykyPros;
@@ -292,7 +292,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     vanha["Tunniste"] = nykyPros.prop("Tunniste");
     muutos["Tunniste"] = tunniste;
     nykyPros.prop("Tunniste", tunniste);
-    nypyPros.prop("_TunnistePäivitetty", aikaleima);
+    nykyPros.prop("_TunnistePäivitetty", aikaleima);
     var vanhatunniste = nykyPros.prop("_VanhaTunniste") ? nykyPros.prop("_VanhaTunniste") + "; " : "";
     nykyPros.prop("_VanhaTunniste", vanhatunniste + vanha["Tunniste"]);
   }
