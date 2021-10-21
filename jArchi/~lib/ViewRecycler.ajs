@@ -70,9 +70,15 @@ function createOrRecycleArchimateView(existing, name, folder, replaceOld) {
         } else {
           if (!viewObj.elems[obj.concept.id]) viewObj.elems[obj.concept.id] = [];
           viewObj.elems[obj.concept.id].push(obj);
-          //console.log("- Lisättiin elementti id " + obj.concept.id);
+          //console.log("- Lisättiin elementti " + obj + " konseptille " + obj.concept);
         }
       } else {
+        if (obj.type == "diagram-model-group") {
+          $("#" + obj.id).find().each(function (subobj) {
+            console.log("- dellataan aliobjekti " + subobj + " ryhmästä " + obj);
+            subobj.delete();
+          });
+        }
         if (obj.prop("_ObjektiTunniste")) {
           if (!viewObj.objs[obj.prop("_ObjektiTunniste")]) viewObj.objs[obj.prop("_ObjektiTunniste")] = [];
           viewObj.objs[obj.prop("_ObjektiTunniste")].push(obj);
@@ -163,7 +169,10 @@ function recycledViewFinishRecycling(viewObj) {
     for (var i = 0; i < viewObj.rels[objid].length; i++) viewObj.rels[objid][i].delete();
   }
   for (var objid in viewObj.elems) {
-    for (var i = 0; i < viewObj.elems[objid].length; i++) viewObj.elems[objid][i].delete();
+    for (var i = 0; i < viewObj.elems[objid].length; i++) {
+      console.log("Dellataan " + viewObj.elems[objid][i]);
+      viewObj.elems[objid][i].delete();
+    }
   }
   for (var objid in viewObj.objs) {
     for (var i = 0; i < viewObj.objs[objid].length; i++) viewObj.objs[objid][i].delete();
