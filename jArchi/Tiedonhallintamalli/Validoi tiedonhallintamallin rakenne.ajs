@@ -1,0 +1,244 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict"; 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+console.show();
+console.clear();
+console.log("> Tiedonhallintamallin rakenteen validointi");
+
+var maxherjatkysy = 50;
+
+var elementtivalidoinnit = {
+  "Prosessi": {
+    tunnista: function (elem) { return elem.type == "business-process" && fth(elem); },
+    tarkistukset: [
+      tarkistaTunniste,
+      etsiDuplikaatit("prosessin tunniste", function (elem) { return elem.prop("Tunniste"); }),
+      etsiDuplikaatit("prosessin IMS ID", function (elem) { return elem.prop("IMS ID"); }),
+      tarkistaElementinOmistaja
+    ]
+  },
+  "Tietovaranto": {
+    tunnista: function (elem) { return elem.type == "product" && fthHaving({ "_Tietovaranto": "1"})(elem); },
+    tarkistukset: [
+      etsiDuplikaatit("tietovaranto", function (elem) { return elem.name; }),
+      tarkistaElementinOmistaja
+    ]
+  },
+  "Tietojärjestelmä": {
+    tunnista: function (elem) { return elem.type == "application-component" && fth(elem); },
+    tarkistukset: [
+      etsiDuplikaatit("tietojärjestelmän nimi", function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return elem.name; }),
+      etsiDuplikaatit("tietojärjestelmän Järjestelmäsalkku-ID", function (elem) { return elem.prop("Järjestelmäsalkku-ID"); }),
+      function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return tarkistaElementinOmistaja(elem); }
+    ]
+  },
+  "Tehtäväluokka": {
+    tunnista: function (elem) { return elem.type == "business-function" && fth(elem); },
+    tarkistukset: [
+      tarkistaTunniste,
+      etsiDuplikaatit("tehtäväluokan tunniste", function (elem) { return elem.prop("Tunniste"); }),
+    ]
+  },
+  "Organisaatio": {
+    tunnista: function (elem) { return elem.type == "business-actor" && fth(elem); },
+    tarkistukset: []
+  }
+};
+
+var relaatioduplikaatit = etsiDuplikaatit("relaatio",
+  function (rel) { return rel.type + "/" + rel.source.id + "/" + rel.target.id; }
+);
+
+var relaatiovalidoinnit = {
+  "Tiedonhallintamallin elementin omistaa organisaatio": {
+    tunnista: function (rel) { return rel.type == "association-relationship" && rel.name == "vastaa" && tunnistaElementti(rel.source) == "Organisaatio" && tunnistaElementti(rel.target); },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Prosessin syöte prosessille": {
+    tunnista: function (rel) { return rel.type == "flow-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Prosessin aliprosessi": {
+    tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Prosessissa hyödynnetään tietovarantoa": {
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietovaranto" && tunnistaElementti(rel.target) == "Prosessi"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Prosessissa hyödynnetään tietojärjestelmää": {
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Prosessi"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Prosessi palvelee tehtäväluokkaa": {
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Tietovaranto palvelee tehtäväluokkaa": {
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietovaranto" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Tietojärjestelmä on osa tietovarantoa": {
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietovaranto"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Tietojärjestelmien välinen liittymä": {
+    tunnista: function (rel) { return rel.type == "flow-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
+    tarkistukset: []  // ei voida käyttää relaatioduplikaatit-tarkistusta koska voi olla useampi eri tietovirta samojen järjestelmien välillä
+  },
+  "Järjestelmäkokonaisuuteen kuuluva tietojärjestelmä": {
+    tunnista: function (rel) { return rel.type == "composition-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Tehtäväluokan alitehtäväluokka": {
+    tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Tehtäväluokka" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Vapaatekstien metsästys": {
+    tunnista: function (rel) { return rel.type == "realization-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
+    tarkistukset: [
+      relaatioduplikaatit,
+      function (rel) {
+        if (rel.target.prop("_JärjestelmäsalkunVapaateksti") != "1") return "Relaation kohde ei ole Järjestelmäsalkun vapaateksti";
+      }
+    ]
+  },
+  "Organisaation aliorganisaatio": {
+    tunnista: function (rel) { return rel.type == "aggregation-relationship" && tunnistaElementti(rel.source) == "Organisaatio" && tunnistaElementti(rel.target) == "Organisaatio"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+}
+
+var duplikaatit = {};
+
+function etsiDuplikaatit(_nimi, _arvofunktio) {
+  return (function () {
+    var nimi = _nimi;
+    var arvofunktio = _arvofunktio;
+    return function (elem) {
+      if (!duplikaatit[nimi]) duplikaatit[nimi] = {};
+      var arvo = arvofunktio(elem)
+      if (!arvo) return;  // ohitetaan tyhjät
+      if (duplikaatit[nimi][arvo]) {
+        var dupelem = $("#" + duplikaatit[nimi][arvo]).first();
+        return {
+          herja: "Duplikaatti " + nimi,
+          kohde: dupelem
+        }
+      }
+      duplikaatit[nimi][arvo] = elem.id;
+    }
+  })();
+}
+
+function tarkistaTunniste(elem) {
+  var tunniste = elem.prop("Tunniste");
+  if (!tunniste) {
+    return "Tunniste puuttuu";
+  } else if (elem.name.search(tunniste) != 0) {
+    return "Tunniste ei vastaa nimen alkua, tunniste: " + tunniste;
+  }
+}
+
+function tarkistaElementinOmistaja(elem) {
+  var omistajat = $("#" + elem.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").filter(fth);
+  if (!omistajat || omistajat.size() < 1) return "Omistava organisaatio puuttuu";
+  if (omistajat.size() > 1) return "USEITA OMISTAVIA ORGANISAATIOITA MERKITTY";
+  var omistaja = omistajat.first();
+  if (!omistaja) return "omistaja undefined " + omistajat; // HÄH
+  if (elem.prop("_Omistaja") && elem.prop("_Omistaja") != omistaja.name) {
+    return "Omistajan nimi eroaa _Omistaja-tiedosta kohteella, [" + omistaja.name + "] vs. [" + elem.prop("_Omistaja") + "]";
+  }
+}
+
+function tunnistaElementti(elem) {
+  for (var laji in elementtivalidoinnit) {
+    if (elementtivalidoinnit[laji].tunnista(elem)) return laji;
+  }
+}
+
+function tunnistaRelaatio(rel) {
+  for (var laji in relaatiovalidoinnit) {
+    if (relaatiovalidoinnit[laji].tunnista(rel)) return laji;
+  }
+}
+
+function tulostaPolku(elem) {
+  var parent = $("#" + elem.id).parent().first();
+  if (elem.type != "folder") return tulostaPolku(parent);
+  if (parent.type != "folder") parent = null;
+  return (parent ? tulostaPolku(parent) + " / " : "") + elem.name;
+}
+
+function tulostaKohde(elem) {
+  if (elem.type.indexOf("relationship") >= 0) {  // kyseessä on relaatio
+    var rel = elem;
+    return rel + " elementistä " + rel.source + " (" + tulostaPolku(rel.source) + ") elementtiin " + rel.target + " (" + tulostaPolku(rel.target) + ")";
+  } else {  // tavallinen elementti
+    return elem + " (" + tulostaPolku(elem) + ")";
+  }
+}
+
+var laskuri = 0;
+
+console.log("> Validoidaan elementit");
+console.log();
+
+$("element").each(function (elem) {
+  var laji = tunnistaElementti(elem);
+  if (laji) {
+    var tarkistukset = elementtivalidoinnit[laji].tarkistukset;
+    for (var i = 0; i < tarkistukset.length; i++) {
+      var herja = tarkistukset[i](elem);
+      if (herja) {
+        laskuri++;
+        if (typeof herja == "string") herja = { "herja": herja };
+        console.log(laskuri + ". " + herja.herja + ", elementti " + tulostaKohde(elem) + (herja.kohde ? ", kohde " + tulostaKohde(herja.kohde) : ""));
+        console.log();
+      }
+    }
+  } else {
+    laskuri++;
+    console.log(laskuri + ". Tiedonhallintamalliin kuulumaton elementti " + tulostaKohde(elem));
+    console.log();
+  }
+  if (laskuri > 0 && laskuri % maxherjatkysy == 0) {
+    if (!window.confirm("Jatketaanko yhä validointia?")) exit();
+  }
+});
+
+console.log("> Validoidaan relaatiot");
+console.log();
+
+$("relationship").each(function (rel) {
+  var laji = tunnistaRelaatio(rel);
+  if (laji) {
+    var tarkistukset = relaatiovalidoinnit[laji].tarkistukset;
+    for (var i = 0; i < tarkistukset.length; i++) {
+      /*if (typeof tarkistukset[i] != "function") {
+        console.log(typeof tarkistukset[i] + " " + tarkistukset[i]);
+      }*/
+      var herja = tarkistukset[i](rel);
+      if (herja) {
+        laskuri++;
+        if (typeof herja == "string") herja = { "herja": herja };
+        console.log(laskuri + ". " + herja.herja + ", relaatio " + tulostaKohde(rel) + (herja.kohde ? ", kohde " + tulostaKohde(herja.kohde) : ""));
+        console.log();
+      }
+    }
+  } else {
+    laskuri++;
+    console.log(laskuri + ". Tiedonhallintamalliin kuulumaton relaatio " + tulostaKohde(rel));
+    console.log();
+  }
+  if (laskuri > 0 && laskuri % maxherjatkysy == 0) {
+    if (!window.confirm("Jatketaanko yhä validointia?")) exit();
+  }
+});
+
+console.log("> Valmis");
+console.log();
