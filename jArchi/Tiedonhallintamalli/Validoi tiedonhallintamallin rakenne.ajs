@@ -11,6 +11,9 @@ console.log("> Tiedonhallintamallin rakenteen validointi");
 
 var maxherjatkysy = 50;
 
+//var tunnisteNumeroPattern = /^([OT]|Y[AJP]?)?(\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/;
+var tunnisteNumeroPattern = /^([OT]|Y[AJP]?)?(\d+(\.|(\.\d+)*))($|[^0-9\.])/;  // prosessien ja tehtäväluokkien yhteinen, ei siten täysin tarkka
+
 var elementtivalidoinnit = {
   "Prosessi": {
     tunnista: function (elem) { return elem.type == "business-process" && fth(elem); },
@@ -18,7 +21,9 @@ var elementtivalidoinnit = {
       tarkistaTunniste,
       etsiDuplikaatit("prosessin tunniste", function (elem) { return elem.prop("Tunniste"); }),
       etsiDuplikaatit("prosessin IMS ID", function (elem) { return elem.prop("IMS ID"); }),
-      tarkistaElementinOmistaja
+      tarkistaElementinOmistaja, 
+      function (pros) { if (!pros.prop("IMS ID")) return "Prosessilta puuttuu IMS ID"; },
+      tarkistaYlaprosessi
     ]
   },
   "Tietovaranto": {
@@ -41,6 +46,7 @@ var elementtivalidoinnit = {
     tarkistukset: [
       tarkistaTunniste,
       etsiDuplikaatit("tehtäväluokan tunniste", function (elem) { return elem.prop("Tunniste"); }),
+      tarkistaYlatehtavaluokka
     ]
   },
   "Organisaatio": {
@@ -142,6 +148,7 @@ function tarkistaTunniste(elem) {
   } else if (elem.name.search(tunniste) != 0) {
     return "Tunniste ei vastaa nimen alkua, tunniste: " + tunniste;
   }
+  if (!tunnisteNumeroPattern.exec(tunniste)) return "Tunniste ei ole oikean muotoinen";
 }
 
 function tarkistaElementinOmistaja(elem) {
@@ -150,10 +157,42 @@ function tarkistaElementinOmistaja(elem) {
   if (omistajat.size() > 1) return "USEITA OMISTAVIA ORGANISAATIOITA MERKITTY";
   var omistaja = omistajat.first();
   if (!omistaja) return "omistaja undefined " + omistajat; // HÄH
-  if (elem.prop("_Omistaja") && elem.prop("_Omistaja") != omistaja.name) {
-    return "Omistajan nimi eroaa _Omistaja-tiedosta kohteella, [" + omistaja.name + "] vs. [" + elem.prop("_Omistaja") + "]";
+  if (elem.prop("Omistaja") && elem.prop("Omistaja") != omistaja.name) {
+    return "Omistajan nimi eroaa Omistaja-tiedosta kohteella, [" + omistaja.name + "] vs. [" + elem.prop("Omistaja") + "]";
   }
 }
+
+function tarkistaYlaelementti(elem, ylafunktio, sanat) {
+  var ylaelems = ylafunktio(elem);
+  if (ylaelems.size() <= 0) return;
+  if (ylaelems.size() > 1) return "Useita " + sanat[0];
+  var ylaelem = ylaelems.first();
+  var alatunniste = elem.prop("Tunniste");
+  var ylatunniste = ylaelem.prop("Tunniste");
+  if (!alatunniste || !ylatunniste) return;
+  var alamatch = tunnisteNumeroPattern.exec(alatunniste);
+  var ylamatch = tunnisteNumeroPattern.exec(ylatunniste);
+  if (alamatch && ylamatch && alamatch[2].indexOf(ylamatch[2]) != 0)
+    return { herja: sanat[1] + " tunniste ei täsmää yläprosessin tunnisteen kanssa", kohde: ylaelem };
+  /* var parent = $("#" + elem.id).parent().first();
+  if (ylaelem.name != parent.name)
+    return { herja: sanat[2] + " on kansiossa, jonka nimi ei vastaa yläprosessin nimeä", kohde: ylaelem }; */
+}
+
+function tarkistaYlaprosessi(elem) {
+  return tarkistaYlaelementti(elem,
+    function (elem) { return $("#" + elem.id).outRels("specialization-relationship").targetEnds("business-process").filter(fth); },
+    ["yläprosesseja", "Prosessin", "Prosessi"]
+  );
+}
+
+function tarkistaYlatehtavaluokka(elem) {
+  return tarkistaYlaelementti(elem,
+    function (elem) { return $("#" + elem.id).outRels("specialization-relationship").targetEnds("business-function").filter(fth); },
+    ["ylätehtäväluokkia", "Tehtäväluokan", "Tehtäväluokka"]
+  );
+}
+
 
 function tunnistaElementti(elem) {
   for (var laji in elementtivalidoinnit) {
