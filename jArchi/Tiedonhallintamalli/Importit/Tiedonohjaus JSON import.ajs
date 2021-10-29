@@ -99,6 +99,12 @@ function muotoileTieto(tunniste, metadatavalues, metadatamap, palautataulukko) {
   return arvo ? arvo : "";
 }
 
+function parsiPvm(pvm) {
+  var pvmPattern = /(\d+)\.(\d+)\.(\d+)\s(\d+):(\d+):(\d+)/g;
+  var match = pvmPattern.exec(pvm);
+  return match ? new Date(match[3], match[2] - 1, match[1], match[4], match[5], match[6], 0) : null;
+}
+
 console.show();
 console.clear();
 console.log("> Tiedonohjaus JSON import");
@@ -134,6 +140,7 @@ $("business-function").filter(fth).each(function (bf) {
 });
 
 var aikaleima = new Date().format("isoDateTime");
+var uusinmuutos;
 
 for (var h = 0; h < tossit.length; h++) {
   console.log("> Starting reading file " + tossit[h].file + "...");
@@ -213,6 +220,13 @@ for (var h = 0; h < tossit.length; h++) {
 
     tehtluokkaitem.loytyi = true;
 
+    var metadatat = ensureArray(tehtluokat[i]["Metadatas"]["XMetadata"]);
+    for (var j = 0; j < metadatat.length; j++) {
+      if (metadatat[j]["MetadataName"] == "EventTime") {
+        var paivitysPvm = parsiPvm(metadatat[j]["Value"]);
+        uusinmuutos = uusinmuutos ? (paivitysPvm > uusinmuutos ? paivitysPvm : uusinmuutos) : paivitysPvm;
+      }
+    }
 
     var tasks = tehtluokat[i]["Tasks"];
     if (tasks) {
@@ -250,6 +264,10 @@ for (var h = 0; h < tossit.length; h++) {
               //debug? console.log(metadatat[l]) :"";
               if (metadatat[l]["Title"] in dokumentinMetadatat) {
                 metadatavalues[metadatat[l]["Title"]] = metadatat[l]["Value"];
+              }
+              if (metadatat[l]["MetadataName"] == "EventTime") {
+                var paivitysPvm = parsiPvm(metadatat[l]["Value"]);
+                uusinmuutos = uusinmuutos ? (paivitysPvm > uusinmuutos ? paivitysPvm : uusinmuutos) : paivitysPvm;
               }
             }
             doktyypit.push(metadatavalues);
@@ -368,7 +386,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
 
 }
 
-model.prop("Päivitetty Tiedonohjaussuunnitelmasta", aikaleima);
+model.prop("Päivitetty Tiedonohjaussuunnitelmasta", uusinmuutos.format("isoDateTime"));
 console.log("> Valmis");
 console.log();
 
