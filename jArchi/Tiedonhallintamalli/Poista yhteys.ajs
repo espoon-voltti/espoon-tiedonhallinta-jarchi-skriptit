@@ -1,0 +1,88 @@
+﻿/*
+ * Tämä skripti poistaa yhteyksiä prosessien, tietovarantojen ja tietojärjestelmien väliltä.
+ * Valittuna voi olla relaatioita tai kaksi tai useampia elementtejä, joiden väliset relaatiot käydään läpi.
+ * Jokainen poisto varmistetaan erikseen käyttäjältä.
+ */
+
+"use strict"; 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
+console.log(">>> Aloitetaan yhteyksien tai kohteiden poistaminen... ");
+
+var yhteydet = [];
+var kohteet = [];
+
+var ajankohta = new Date();
+var aikaleima = ajankohta.format("isoDateTime");
+
+$(selection).each(function (elem) {
+  elem = elem.concept ? elem.concept : elem;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+  if (elem.type == "archimate-diagram-model" && elem.prop("_KuvattavaKohde")) {  // jos valittuna näkymä, tulkitaan tarkoitetun näkymän kohdetta
+    elem = $("#" + elem.prop("_KuvattavaKohde")).first();
+  }
+  if (elem.type == "serving-relationship") {
+    yhteydet.push(elem);
+    return;
+  }
+  if (!fth(elem)) {
+    console.error("Kohde ei kuulu tiedonhallintamalliin: " + elem + ", ei voida jatkaa.");
+    exit();
+  }
+  if (elem.type == "business-process") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "product" && elem.prop("_Tietovaranto") == "1") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "application-component") {
+    kohteet.push(elem);
+    return;
+  }
+  console.error("Valittu kohde ei ole prosessi, tietovaranto tai tietojärjestelmä tai näiden välinen yhteys: " + elem + ", ei voida jatkaa.");
+  exit();
+});
+
+var laskuri = 0;
+
+for (var i = 0; i < yhteydet.length; i++) {
+  if (!fth(yhteydet[i].source) || !fth(yhteydet[i].target)) {
+    console.error("Relaation " + yhteydet[i] + " (" + yhteydet[i].source + " -> " + yhteydet[i].target + ") toinen pää ei kuulu tiedonhallintamalliin, ohitetaan");
+    continue;
+  }
+  if (window.confirm("Poistetaanko yhteys " + yhteydet[i] + " (" + yhteydet[i].source + " -> " + yhteydet[i].target + ")?")) {
+    yhteydet[i].source.prop("_Päivitetty", aikaleima);
+    yhteydet[i].target.prop("_Päivitetty", aikaleima);
+    yhteydet[i].delete();
+    laskuri++;
+  }
+}
+
+for (var i = 0; i < kohteet.length - 1; i++) {
+  for (var j = i + 1; j < kohteet.length; j++) {
+    var rels = $("#" + kohteet[i].id).rels("serving-relationship").filter(function (rel) {
+      //console.log(i + " / " + kohteet[i] + " / " + j + " / " + kohteet[j] + " / " + rel + " (" + rel.source + " -> " + rel.target + ")");
+      return rel.source.id == kohteet[j].id || rel.target.id == kohteet[j].id;
+    });
+    rels.each(function (rel) {
+      if (window.confirm("Poistetaanko yhteys " + rel + " (" + rel.source + " -> " + rel.target + ")?")) {
+        console.log("- Poistetaan yhteys " + rel + " (" + rel.source + " -> " + rel.target + ")");
+        rel.source.prop("_Päivitetty", aikaleima);
+        rel.target.prop("_Päivitetty", aikaleima);
+        rel.delete();
+        laskuri++;
+      }
+    });
+  }
+}
+
+
+console.log("Valittuna oli " + $(selection).size() + " kohdetta. Poistettiin " + laskuri + " yhteyttä tai kohdetta.");
+console.log("Muista päivittää näkymä(t)!");
+
+console.log("<<<");
+console.log("");
+

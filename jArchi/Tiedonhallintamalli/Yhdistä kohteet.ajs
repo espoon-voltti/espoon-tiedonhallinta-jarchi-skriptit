@@ -1,0 +1,115 @@
+﻿/*
+ * Tämä skripti yhdistää kaksi tai useampia tiedonhallintamallin elementtiä, joiden tulee olla tyyppiä
+ * prosessi, tietovaranto tai tietojärjestelmä. Relaation tyypiksi tulee serving-relationship.
+ */
+
+"use strict"; 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
+console.log(">>> Aloitetaan kohteiden yhdistäminen... ");
+
+var prosessit = [];
+var tietovarannot = [];
+var tietojarjestelmat = [];
+
+var ajankohta = new Date();
+var aikaleima = ajankohta.format("isoDateTime");
+
+function onYhteys(kohde1, kohde2) {
+  var rels = $("#" + kohde1.id).rels("serving-relationship").filter(function (rel) {
+    return rel.source.id == kohde2.id || rel.target.id == kohde2.id;
+  });
+  return rels.size() > 0;
+}
+
+$(selection).each(function (elem) {
+  elem = elem.concept ? elem.concept : elem;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+  if (elem.type == "archimate-diagram-model" && elem.prop("_KuvattavaKohde")) {  // jos valittuna näkymä, tulkitaan tarkoitetun näkymän kohdetta
+    elem = $("#" + elem.prop("_KuvattavaKohde")).first();
+  }
+  if (!fth(elem)) {
+    console.error("Kohde ei kuulu tiedonhallintamalliin: " + elem + ", ei voida jatkaa.");
+    exit();
+  }
+  if (elem.type == "business-process") {
+    prosessit.push(elem);
+    return;
+  }
+  if (elem.type == "product" && elem.prop("_Tietovaranto") == "1") {
+    tietovarannot.push(elem);
+    return;
+  }
+  if (elem.type == "application-component") {
+    tietojarjestelmat.push(elem);
+    return;
+  }
+  console.error("Kohde ei ole prosessi, tietovaranto tai tietojärjestelmä: " + elem + ", ei voida jatkaa.");
+  exit();
+});
+
+var laskuri = 0;
+
+if (prosessit.length) {
+  if (tietovarannot.length && tietojarjestelmat.length) {
+    if (!window.confirm("Kytketäänkö prosessi(t) [" + prosessit + "] tietovarantoihin [" + tietovarannot + "] ja tietojärjestelmiin [" + tietojarjestelmat + "]?")) {
+      console.log("Älä valitse prosesseja jos et halua kytkeä niitä... lopetetaan.");
+      exit();
+    }
+  }
+  for (var i = 0; i < prosessit.length; i++) {
+    for (var j = 0; j < tietovarannot.length; j++) {
+      if (onYhteys(prosessit[i], tietovarannot[j])) {
+        console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietovarannot[j]);
+      } else {
+        console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietovarantoon " + tietovarannot[j]);
+        model.createRelationship("serving-relationship", "", tietovarannot[j], prosessit[i]);
+        tietovarannot[j].prop("_Päivitetty", aikaleima);
+        prosessit[i].prop("_Päivitetty", aikaleima);
+        laskuri++;
+      }
+    }
+    for (var j = 0; j < tietojarjestelmat.length; j++) {
+      if (onYhteys(prosessit[i], tietojarjestelmat[j])) {
+        console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietojarjestelmat[j]);
+      } else {
+        console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietojärjestelmään " + tietojarjestelmat[j]);
+        model.createRelationship("serving-relationship", "", tietojarjestelmat[j], prosessit[i]);
+        tietojarjestelmat[j].prop("_Päivitetty", aikaleima);
+        prosessit[i].prop("_Päivitetty", aikaleima);
+        laskuri++;
+      }
+    }
+  }
+}
+
+if (tietovarannot.length && tietojarjestelmat.length) {
+  var jatka = true;
+  if (prosessit.length) {
+    jatka = window.confirm("Kytketäänkö tietojärjestelmät [" + tietojarjestelmat + "] tietovarantoihin [" + tietovarannot + "]?" +
+      (tietovarannot.length > 1 ? " HUOM! Suositus on, että tietojärjestelmät kytkettäisiin pääsääntöisesti vain yhteen tietovarantoon." : ""));
+  }
+  if (jatka) {
+    for (var i = 0; i < tietojarjestelmat.length; i++) {
+      for (var j = 0; j < tietovarannot.length; j++) {
+        if (onYhteys(tietojarjestelmat[i], tietovarannot[j])) {
+          console.error("- YHTEYS ON JO OLEMASSA: " + tietovarannot[j] + " / " + tietojarjestelmat[i]);
+        } else {
+          console.log("- Luodaan yhteys tietojärjestelmästä " + tietojarjestelmat[i] + " tietovarantoon " + tietovarannot[j]);
+          model.createRelationship("serving-relationship", "", tietojarjestelmat[i], tietovarannot[j]);
+          tietojarjestelmat[i].prop("_Päivitetty", aikaleima);
+          tietovarannot[j].prop("_Päivitetty", aikaleima);
+          laskuri++;
+        }
+      }
+    }
+  }
+}
+
+console.log("Valittuna oli " + $(selection).size() + " kohdetta. Lisättiin " + laskuri + " uutta yhteyttä.");
+console.log("Muista päivittää näkymä(t)!");
+
+console.log("<<<");
+console.log("");
+
