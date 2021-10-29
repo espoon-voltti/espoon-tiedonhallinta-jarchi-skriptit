@@ -11,11 +11,10 @@ console.log("> Tiedonhallintamallin rakenteen validointi");
 
 var maxherjatkysy = 50;
 
-//var tunnisteNumeroPattern = /^([OT]|Y[AJP]?)?(\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/;
 var tunnisteNumeroPattern = /^([OT]|Y[AJP]?)?(\d+(\.|(\.\d+)*))($|[^0-9\.])/;  // prosessien ja tehtäväluokkien yhteinen, ei siten täysin tarkka
 
 var elementtivalidoinnit = {
-  "Prosessi": {
+  "Prosessi": {  // ylläpito IMS:ssä
     tunnista: function (elem) { return elem.type == "business-process" && fth(elem); },
     tarkistukset: [
       tarkistaTunniste,
@@ -26,14 +25,14 @@ var elementtivalidoinnit = {
       tarkistaYlaprosessi
     ]
   },
-  "Tietovaranto": {
+  "Tietovaranto": {  // YLLÄPITO ARCHISSA
     tunnista: function (elem) { return elem.type == "product" && fthHaving({ "_Tietovaranto": "1"})(elem); },
     tarkistukset: [
       etsiDuplikaatit("tietovaranto", function (elem) { return elem.name; }),
       tarkistaElementinOmistaja
     ]
   },
-  "Tietojärjestelmä": {
+  "Tietojärjestelmä": {  // ylläpito Järjestelmäsalkussa (pl. karkulaiset)
     tunnista: function (elem) { return elem.type == "application-component" && fth(elem); },
     tarkistukset: [
       etsiDuplikaatit("tietojärjestelmän nimi", function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return elem.name; }),
@@ -41,7 +40,7 @@ var elementtivalidoinnit = {
       function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return tarkistaElementinOmistaja(elem); }
     ]
   },
-  "Tehtäväluokka": {
+  "Tehtäväluokka": {  // ylläpito TOJ:ssa
     tunnista: function (elem) { return elem.type == "business-function" && fth(elem); },
     tarkistukset: [
       tarkistaTunniste,
@@ -49,7 +48,7 @@ var elementtivalidoinnit = {
       tarkistaYlatehtavaluokka
     ]
   },
-  "Organisaatio": {
+  "Organisaatio": {  // YLLÄPITO ARCHISSA (lähteenä hallintosääntö ja toimintaohjeet)
     tunnista: function (elem) { return elem.type == "business-actor" && fth(elem); },
     tarkistukset: []
   }
@@ -64,47 +63,47 @@ var relaatiovalidoinnit = {
     tunnista: function (rel) { return rel.type == "association-relationship" && rel.name == "vastaa" && tunnistaElementti(rel.source) == "Organisaatio" && tunnistaElementti(rel.target); },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Prosessin syöte prosessille": {
+  "Prosessin syöte prosessille": {  // ylläpito IMS:ssä
     tunnista: function (rel) { return rel.type == "flow-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Prosessin aliprosessi": {
+  "Prosessin aliprosessi": {  // ylläpito IMS:ssä
     tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Prosessissa hyödynnetään tietovarantoa": {
+  "Prosessissa hyödynnetään tietovarantoa": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietovaranto" && tunnistaElementti(rel.target) == "Prosessi"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Prosessissa hyödynnetään tietojärjestelmää": {
+  "Prosessissa hyödynnetään tietojärjestelmää": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Prosessi"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Prosessi palvelee tehtäväluokkaa": {
+  "Prosessi palvelee tehtäväluokkaa": {  // ylläpito TOJ:ssa
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Tietovaranto palvelee tehtäväluokkaa": {
+  "Tietovaranto palvelee tehtäväluokkaa": {  // ylläpito TOJ:ssa
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietovaranto" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Tietojärjestelmä on osa tietovarantoa": {
+  "Tietojärjestelmä palvelee tietovarantoa": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietovaranto"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Tietojärjestelmien välinen liittymä": {
-    tunnista: function (rel) { return rel.type == "flow-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
+  "Tietojärjestelmien välinen liittymä": {  // ylläpito Järjestelmäsalkussa (pl. karkulaiset?)
+    tunnista: function (rel) { return rel.type == "flow-relationship" && fth(rel) && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
     tarkistukset: []  // ei voida käyttää relaatioduplikaatit-tarkistusta koska voi olla useampi eri tietovirta samojen järjestelmien välillä
   },
-  "Järjestelmäkokonaisuuteen kuuluva tietojärjestelmä": {
+  "Järjestelmäkokonaisuuteen kuuluva tietojärjestelmä": {  // ylläpito Järjestelmäsalkussa
     tunnista: function (rel) { return rel.type == "composition-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Tehtäväluokan alitehtäväluokka": {
+  "Tehtäväluokan alitehtäväluokka": {  // ylläpito TOJ:ssa
     tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Tehtäväluokka" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Vapaatekstien metsästys": {
+  "Vapaatekstien metsästys": {  // YLLÄPITO TOISTAISEKSI ARCHISSA
     tunnista: function (rel) { return rel.type == "realization-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
     tarkistukset: [
       relaatioduplikaatit,
@@ -113,7 +112,7 @@ var relaatiovalidoinnit = {
       }
     ]
   },
-  "Organisaation aliorganisaatio": {
+  "Organisaation aliorganisaatio": {  // YLLÄPITO ARCHISSA (lähteenä hallintosääntö ja toimintaohjeet)
     tunnista: function (rel) { return rel.type == "aggregation-relationship" && tunnistaElementti(rel.source) == "Organisaatio" && tunnistaElementti(rel.target) == "Organisaatio"; },
     tarkistukset: [relaatioduplikaatit]
   },
