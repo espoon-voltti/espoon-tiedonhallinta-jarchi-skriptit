@@ -1,5 +1,5 @@
 ﻿/*
- * Tämä skripti asettaa Espoon tiedonhallintamalliin kuuluvien elementtien _Omistaja-kentän arvoksi 
+ * Tämä skripti asettaa Espoon tiedonhallintamalliin kuuluvien elementtien Omistaja-kentän arvoksi 
  * vastaa-relaation mukaisen omistajan nimen. 
  */
 
@@ -52,14 +52,14 @@ if (kohdeOmistaja) {
   });
 }
 
-console.log("> Päivitetään valittujen kohteiden _Omistaja-ominaisuus...");
+console.log("> Päivitetään valittujen kohteiden Omistaja-ominaisuus...");
 
 valinta.each(function(element) {
   if (!fth(element)) return;
   element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää  
 
   var omistaja = $("#"+element.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").first();
-  if (omistaja) element.prop("_Omistaja", omistaja.name);
+  if (omistaja) element.prop("Omistaja", omistaja.name);
 });
 
 console.log("<<<");

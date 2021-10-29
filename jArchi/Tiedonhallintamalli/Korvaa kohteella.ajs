@@ -70,7 +70,7 @@ kohteet.sort(korvauscompare);
 valittavat = "";
 for (i = 0; i < kohteet.size(); i++) {
   kohde = kohteet.get(i);
-  valittavat = valittavat + (i+1) + " = " + kohde.name + " [" + kohde.prop("_Omistaja") + "] (";
+  valittavat = valittavat + (i+1) + " = " + kohde.name + " [" + kohde.prop("Omistaja") + "] (";
   if (kohde.prop("_Tiedonhallintamalli") == "1") valittavat = valittavat + "Tiedonhallintamallissa ";
   if (kohde.prop("Virallinen") == "F") valittavat = valittavat + "EPÄVIRALLINEN ";
   if (kohde.type == "application-component" && parseInt(kohde.prop("Järjestelmäsalkku ID")) > 0)
@@ -90,9 +90,9 @@ korvattavat = kohteet.not("#"+korvaava.id);
 
 paivitettavatNakymat = new java.util.HashSet();
 
-console.log(">>> Aletaan korvata kohteeksi: " + korvaava + " [" + korvaava.prop("_Omistaja") + "]");
+console.log(">>> Aletaan korvata kohteeksi: " + korvaava + " [" + korvaava.prop("Omistaja") + "]");
 korvattavat.each(function (korvattava) {
-  console.log("Korvataan kohdetta " + korvattava + " [" + korvattava.prop("_Omistaja") + "]");
+  console.log("Korvataan kohdetta " + korvattava + " [" + korvattava.prop("Omistaja") + "]");
 
   // luodaan uudet relaatiot malliin tai käytetään olemassa olevia jos nimet vastaavat
   korvrels = new java.util.HashMap();
@@ -127,7 +127,8 @@ korvattavat.each(function (korvattava) {
   });
 
   // käydään läpi näkymät, joissa korvattava esiintyy
-  $("view").each(function(view) {
+  /*
+    $("view").each(function(view) {
     nakymanelems = new java.util.HashMap();
     $("#"+view.id).children("element").each(function (viewelem) {
       nakymanelems.put(viewelem.concept, viewelem);
@@ -172,7 +173,7 @@ korvattavat.each(function (korvattava) {
 
     console.log("  o Poistetaan korvattava näkymäelementti, näkymärelaatiot toivottavasti lähtee sen mukana");
     kve.delete();
-  });
+  }); */
   // näkymät käyty läpi
 
   console.log("- Poistetaan korvattava elementti, relaatiot toivottavasti lähtee sen mukana");
@@ -180,11 +181,11 @@ korvattavat.each(function (korvattava) {
 
 });
 
-it = paivitettavatNakymat.iterator();
+/* it = paivitettavatNakymat.iterator();
 while (it.hasNext()) {
   varitettavaNakyma = it.next();
   load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
-}
+} */
 
 console.log("<<<");
 console.log();

@@ -15,7 +15,7 @@ console.log("> Poistetaan sisäiset propertyt tiedonhallintamallin elementeiltä
 
 if (!window.confirm("Toimintoa on tarkoitus käyttää vain tiedonhallintamalllin kopioon, ei itse tiedonhallintamalliin. Jatketaanko?")) exit();
 
-if (!window.confirm("POISTETAAN KAIKKI SISÄISET PROPERTYT (paitsi _Omistaja, _KuvattavaKohde ja _OmaNäkymä). Oletko varma ja haluatko jatkaa?")) exit();
+if (!window.confirm("POISTETAAN KAIKKI SISÄISET PROPERTYT (paitsi Omistaja, _KuvattavaKohde ja _OmaNäkymä). Oletko varma ja haluatko jatkaa?")) exit();
 
 sailytetaan = window.confirm("Säilytetäänkö tietyt perusattribuutit? (jos epävarma, vastaa OK)");
 
@@ -24,7 +24,7 @@ $("element").add("view").filter(fth).each(function (elem) {
   var propertit = elem.prop();
   for (var i = 0; i < propertit.length; i++) {
     var nimi = propertit[i];
-    if (nimi.startsWith("_") && nimi != "_Omistaja" && (!sailytetaan || !(nimi in sailytettavat))) {
+    if (nimi.startsWith("_") && (!sailytetaan || !(nimi in sailytettavat))) {
       elem.removeProp(nimi);
       kpl++;
     }
@@ -37,7 +37,7 @@ $("relationship").filter(fth).each(function (rel) {
   var propertit = rel.prop();
   for (var i = 0; i < propertit.length; i++) {
     var nimi = propertit[i];
-    if (nimi.startsWith("_") && nimi != "_Omistaja" && nimi != "_KuvattavaKohde" && nimi != "_OmaNäkymä") {
+    if (nimi.startsWith("_") && nimi != "_KuvattavaKohde" && nimi != "_OmaNäkymä") {
       rel.removeProp(nimi);
       kpl++;
     }

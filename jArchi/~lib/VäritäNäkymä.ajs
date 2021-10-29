@@ -17,11 +17,11 @@ if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prose
 $("#"+varitettavaNakyma.id).children("element").each(function(viewelem) {
   if (fth(viewelem)) {
     if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0) 
-      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:_Omistaja}, ${property:Kriittisyys}]");
+      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
     else if (viewelem.type == "business-function") 
       viewelem.setLabelExpression("${name}");
     else
-      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:_Omistaja}]");
+      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
     if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
       viewelem.fontStyle = "bold";
     }

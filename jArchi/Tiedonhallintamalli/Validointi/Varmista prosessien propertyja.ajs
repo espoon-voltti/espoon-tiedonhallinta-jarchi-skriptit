@@ -12,9 +12,11 @@ load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 var poistettavat = ["Vastaava viranhaltija"];
 var uudelleennimettavat = {
   "Asiakirjahallinnon tehtäväluokat": "_Asiakirjahallinnon tehtäväluokat",
-  "Tyyppi": "_Tyyppi"
+  "Tyyppi": "_Tyyppi",
+  "_Omistaja": "Omistaja",
+  "Koskee palvelua": "_Koskee palvelua"
 };
-var varmistettavat = ["Koskee asianhallintaa", "Koskee palvelua"];
+var varmistettavat = ["Koskee asianhallintaa"];
 
 $("business-process").filter(fth).each(function (pros) {
   for (var i = 0; i < poistettavat.length; i++) {

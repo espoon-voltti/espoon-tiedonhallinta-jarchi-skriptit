@@ -7,11 +7,10 @@
 var salkunkentat = {
   "EntityId": null,  // käsitellään erikseen
   "Järjestelmänimi": null,  // käsitellään erikseen
-  "Tietosisältö": null,  // käsitellään erikseen
+  "Kuvaus": null,  // käsitellään erikseen
   "Omistajaorg": null,  // käsitellään erikseen
 
   "Alias": "Alias",
-  "Hakutekijät": "Hakutekijät",
   "Järj. omistaja": "Vastaava viranhaltija",
   "Ylläpitovastuu": "Ylläpitovastuu",
   "Järjestelmän kriittisyys kirjain": "Kriittisyys",
@@ -22,6 +21,11 @@ var salkunkentat = {
   "Arvioitu luopuminen": "Arvioitu luopuminen pvm",
   "Poistettu": "Poistettu pvm",
 
+  "Julkinen nimi": "Julkinen nimi",
+  "Hakutekijät": "Hakutekijät",
+  "Tietojen saatavuus avoimella rajapinnalla": "Tietojen saatavuus avoimella rajapinnalla",
+  "Tietoaineistot": "Tietoaineistot",
+  "Asiarekisteri": "Asiarekisteri"
 };
 
 var liittymienkentat = {
@@ -30,6 +34,7 @@ var liittymienkentat = {
   "Siirrettävät\npäätiedot": null,  // käsitellään erikseen
   "Riippuvuuden\ntyyppi": null,  // käsitellään erikseen
 
+  "ID": "Riippuvuus-ID",
   "Kriittisyys": "_Kriittisyys",
   "Integraatioväylät": "_Integraatioväylät",
   "Henkilötieto\nsiirto": "Henkilötietojen siirtoa",
@@ -58,7 +63,7 @@ function luoVapaatekstiJarjestelma(jarjnimi) {
   jarj.prop("_Tiedonhallintamalli", "1");
   jarj.prop("_JärjestelmäsalkunVapaateksti", "1");
   jarj.prop("_NimiSalkussa", jarjnimi);
-  jarj.prop("_Omistaja", "Tietohallinnon vapaatekstit");
+  jarj.prop("Omistaja", "Tietohallinnon vapaatekstit");
   jarj.prop("_Päivitetty", aikaleima);
   jarjNimiMap[jarjnimi] = jarj;
   muuttuneetJarj[jarj.id] = "1";
@@ -188,9 +193,9 @@ if (filePath) {
         nykyJarj.prop("_NimiSalkussa", jarjRivi["Järjestelmänimi"]);
         muutos["_NimiSalkussa"] = jarjRivi["Järjestelmänimi"];
       }
-      if (jarjRivi["Tietosisältö"] != nykyJarj.documentation) {
-        nykyJarj.documentation = jarjRivi["Tietosisältö"];
-        muutos["Kuvaus"] = jarjRivi["Tietosisältö"];
+      if (jarjRivi["Kuvaus"] != nykyJarj.documentation) {
+        nykyJarj.documentation = jarjRivi["Kuvaus"];
+        muutos["Kuvaus"] = jarjRivi["Kuvaus"];
       }
       for (var kentta in salkunkentat) {
         if (salkunkentat[kentta]) {   // käsitellään tässä vain ne, joille ei ole erityiskäsittelyä
@@ -217,7 +222,7 @@ if (filePath) {
         if (!nykyOmistaja || nykyOmistaja.id != uusiOmistaja.id) { // omistajatieto eroaa
           if (nykyOmistaja) nykyOmistajaRel.delete();
           model.createRelationship("association-relationship", "vastaa", uusiOmistaja, nykyJarj);
-          nykyJarj.prop("_Omistaja", uusiOmistaja.name);
+          nykyJarj.prop("Omistaja", uusiOmistaja.name);
           muutos["Omistaja"] = uusiOmistaja.name;
           console.log("VAIHDETAAN JÄRJESTELMÄN " + nykyJarj.name + " OMISTAJAKSI " + uusiOmistaja.name);
         } 

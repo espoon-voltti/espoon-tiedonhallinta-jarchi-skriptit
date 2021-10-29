@@ -352,7 +352,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
       vanha["Omistaja"] = nykyOmistaja;
       if (nykyOmistaja) nykyOmistajaRel.delete();
       model.createRelationship("association-relationship", "vastaa", uusiOmistaja, nykyPros);
-      nykyPros.prop("_Omistaja", uusiOmistaja.name);
+      nykyPros.prop("Omistaja", uusiOmistaja.name);
       muutos["Omistaja"] = uusiOmistaja;
       console.log("VAIHDETAAN PROSESSIN " + nykyPros.name + " OMISTAJAKSI " + uusiOmistaja.name + " (aiempi oli " + nykyOmistaja + ")");
     } 
