@@ -12,7 +12,7 @@ load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
 console.log("> Loaded Papa Parse");
 
-var viemyoskentat = ["_Omistaja", "Vastaava viranhaltija", "Omistuksen lisätieto"];
+var viemyoskentat = ["Koskee asianhallintaa", "Koskee palvelua", "Omistaja", "Omistuksen lisätieto", "_VanhaTunniste", "_TunnistePäivitetty", "_NimiPäivitetty", "_Poistuneeksi merkitty"];
 
 function kasitteleProsessit(_prosessit, _taso, _tulostusfunktio) {
   _prosessit.each(function (_pros) {
@@ -59,6 +59,20 @@ kasitteleProsessit(prosessit, 1, function (pros, taso) {
   csvData.push(datarow);
   delete prosessimap[pros.id];
 });
+
+/* Ylemmän tason nimikkeiden täyttäminen alemman tason riveille - helpottaa suodattamista excelissä - voi jättää pois jos haluaa "harvan" taulukon */
+var ylemmat = [];
+for (var i = 0; i < csvData.length; i++) {
+  var datarow = csvData[i];
+  for (var j = 1; j <= maxTaso; j++) {
+    if (datarow["Taso " + j]) {
+      ylemmat[j] = datarow["Taso " + j];
+      break;
+    } else {
+      datarow["Taso " + j] = ylemmat[j];
+    }
+  }
+}
 
 var csvHeaders = [];
 for (var i = 1; i <= maxTaso; i++) {
