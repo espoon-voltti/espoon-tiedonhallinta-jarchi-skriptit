@@ -65,7 +65,10 @@ var relaatiovalidoinnit = {
   },
   "Prosessin syöte prosessille": {  // ylläpito IMS:ssä
     tunnista: function (rel) { return rel.type == "flow-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
-    tarkistukset: [relaatioduplikaatit]
+    tarkistukset: [
+      relaatioduplikaatit,
+      tarkistaSyote
+    ]
   },
   "Prosessin aliprosessi": {  // ylläpito IMS:ssä
     tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Prosessi" && tunnistaElementti(rel.target) == "Prosessi"; },
@@ -192,6 +195,14 @@ function tarkistaYlatehtavaluokka(elem) {
   );
 }
 
+function tarkistaSyote(rel) {
+  var lahdeTuottaa = null2e(rel.source.prop("Tuottaa syötteitä"));
+  var kohdeSaa = null2e(rel.target.prop("Saa syötteitä"));
+  if ((lahdeTuottaa.indexOf(rel.target.prop("Tunniste")) < 0) &&
+    (kohdeSaa.indexOf(rel.source.prop("Tunniste")) < 0)) {
+    return "Syötteen tunnistetta ei löydy lähteeltä eikä kohteelta (Tuottaa syötteitä = \"" + lahdeTuottaa + "\", Saa syötteitä = \"" + kohdeSaa + "\")";
+  }
+}
 
 function tunnistaElementti(elem) {
   for (var laji in elementtivalidoinnit) {
