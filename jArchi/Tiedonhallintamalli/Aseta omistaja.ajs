@@ -7,7 +7,7 @@
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 console.show();
-console.log(">>> Aloitetaan omistajien ym. asettaminen... ");
+console.log(">>> Aloitetaan omistajien asettaminen... ");
 
 var kohdeOmistaja = null;
 
