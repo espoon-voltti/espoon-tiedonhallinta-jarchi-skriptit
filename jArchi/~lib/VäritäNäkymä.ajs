@@ -3,119 +3,124 @@
  * Lisäksi asetetaan nimiketekstin muodostumissääntö ("Label Expression").
  */
 
-"use //strict"; // pois päältä, koska ei onnistunut kutsua tätä skriptiä toisesta skriptistä strict-moodissa
-console.log("Aletaan värittää näkymää " + varitettavaNakyma);
+"use strict"; // pois päältä, koska ei onnistunut kutsua tätä skriptiä toisesta skriptistä strict-moodissa
 
-function onLapsia(obj) {
-  var onlapsia = $("#"+obj.concept.id).inRels("specialization-relationship").sourceEnds().filter(fth).size() > 0;
-  return onlapsia;
-}
+function varitaNakyma(varitettavaNakyma) {
 
-var lisuke = "${property:Infotieto}";
-if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prosesseja} pros., ${property:_Liittymiä} liitt.)\n"
+  console.log("Aletaan värittää näkymää " + varitettavaNakyma);
 
-$("#"+varitettavaNakyma.id).children("element").each(function(viewelem) {
-  if (fth(viewelem)) {
-    if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0) 
-      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
-    else if (viewelem.type == "business-function") 
-      viewelem.setLabelExpression("${name}");
-    else
-      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
-    if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
-      viewelem.fontStyle = "bold";
+  function onLapsia(obj) {
+    var onlapsia = $("#" + obj.concept.id).inRels("specialization-relationship").sourceEnds().filter(fth).size() > 0;
+    return onlapsia;
+  }
+
+  var lisuke = "${property:Infotieto}";
+  if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prosesseja} pros., ${property:_Liittymiä} liitt.)\n"
+
+  $("#" + varitettavaNakyma.id).children("element").each(function (viewelem) {
+    if (fth(viewelem)) {
+      if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0)
+        viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
+      else if (viewelem.type == "business-function")
+        viewelem.setLabelExpression("${name}");
+      else
+        viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
+      if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
+        viewelem.fontStyle = "bold";
+      }
     }
-  }
-});
+  });
 
-// Prosessit
+  // Prosessit
 
-$("#"+varitettavaNakyma.id).children("business-process").each(function(obj) {
-  if (fth(obj)) {
-    var _aliprosessit = $("#"+obj.concept.id).inRels("specialization-relationship").sourceEnds("business-process").filter(fth);
-    obj.fillColor = "#ffff66";
-    if (onLapsia(obj)) obj.fontColor = "#0000cc";
-  } else obj.fillColor = null;
-});
+  $("#" + varitettavaNakyma.id).children("business-process").each(function (obj) {
+    if (fth(obj)) {
+      var _aliprosessit = $("#" + obj.concept.id).inRels("specialization-relationship").sourceEnds("business-process").filter(fth);
+      obj.fillColor = "#ffff66";
+      if (onLapsia(obj)) obj.fontColor = "#0000cc";
+    } else obj.fillColor = null;
+  });
 
-// Tietovarannot
+  // Tietovarannot
 
-$("#"+varitettavaNakyma.id).children("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function(obj) {
-  if (!fth(obj)) obj.fillColor = null;
-  else if (obj.concept.prop("Virallinen") == "F") {
-    obj.fillColor = "#ff6633";
-  } else {
-    var _omistaja = $("#"+obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
-    if (_omistaja) {
-      if (_omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") obj.fillColor = "#ff9999";  // ulkoinen
-        else obj.fillColor = "#ff9933"; // tavallinen oma tietovaranto
-    } else obj.fillColor = "#ff0000"; // omistaja puuttuu!
-  }
-});
-
-// Tietojärjestelmät
-
-$("#"+varitettavaNakyma.id).children("application-component").filter(fth).each(function(obj) {
-  if (!fth(obj)) obj.fillColor = null;
-  else {
-    if (obj.concept.prop("Virallinen") == "F") {
-      obj.fillColor = "#9966ff"  
+  $("#" + varitettavaNakyma.id).children("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (obj) {
+    if (!fth(obj)) obj.fillColor = null;
+    else if (obj.concept.prop("Virallinen") == "F") {
+      obj.fillColor = "#ff6633";
     } else {
-      var _omistaja = $("#"+obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
+      var _omistaja = $("#" + obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
       if (_omistaja) {
+        if (_omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") obj.fillColor = "#ff9999";  // ulkoinen
+        else obj.fillColor = "#ff9933"; // tavallinen oma tietovaranto
+      } else obj.fillColor = "#ff0000"; // omistaja puuttuu!
+    }
+  });
+
+  // Tietojärjestelmät
+
+  $("#" + varitettavaNakyma.id).children("application-component").filter(fth).each(function (obj) {
+    if (!fth(obj)) obj.fillColor = null;
+    else {
+      if (obj.concept.prop("Virallinen") == "F") {
+        obj.fillColor = "#9966ff"
+      } else {
+        var _omistaja = $("#" + obj.concept.id).inRels("association-relationship").sourceEnds("business-actor").filter(fth).first();
+        if (_omistaja) {
           if (obj.prop("Järjestelmäsalkku ID")) {
             if (varitettavaNakyma.prop("_Järjestelmäkartta") && obj.prop("_Prosesseja") == 0) obj.fillColor = "#99cccc";
-              else obj.fillColor = "#99ccff";  // normaali järjestelmäsalkussa olevan väri
+            else obj.fillColor = "#99ccff";  // normaali järjestelmäsalkussa olevan väri
             if (parseInt(obj.prop("Järjestelmäsalkku ID")) < 0) {
               // poistunut salkusta
               obj.fontColor = "#ff0000";
               obj.fontStyle = "bold";
             }
           } else obj.fillColor = "#6699ff"; // ei salkussa
-      } else if (obj.prop("_JärjestelmäsalkunVapaateksti") == "1") obj.fillColor = "#9999cc";
-      else obj.fillColor = "#ff0099"; // omistaja puuttuu!
-      if (obj.prop("Elinkaaren vaihe") == "Poistettu") obj.fontColor = "#ff0000";
+        } else if (obj.prop("_JärjestelmäsalkunVapaateksti") == "1") obj.fillColor = "#9999cc";
+        else obj.fillColor = "#ff0099"; // omistaja puuttuu!
+        if (obj.prop("Elinkaaren vaihe") == "Poistettu") obj.fontColor = "#ff0000";
+      }
+      if (onLapsia(obj)) obj.fontColor = "#0000cc";
     }
-    if (onLapsia(obj)) obj.fontColor = "#0000cc";
-  }
-});
+  });
 
-// Tehtäväluokat
+  // Tehtäväluokat
 
-$("#"+varitettavaNakyma.id).children("business-function").filter(fth).each(function(obj) {
-  if (!fth(obj)) obj.fillColor = null;
-  else {
-    obj.fillColor = "#eeeeee";
-    if (onLapsia(obj)) obj.fontColor = "#0000cc";
-  }
-});
-
-// Organisaatiot
-
-$("#"+varitettavaNakyma.id).children("business-actor").filter(fth).each(function(obj) {
-  if (!fth(obj)) obj.fillColor = null;
-  else {
-    if (obj.prop("Sisäinen/ulkoinen") != "ulkoinen") {
-      obj.fillColor = "#cccccc"; // sisäinen
-    } else {
-      obj.fillColor = "#cccc99"; // ulkoinen
+  $("#" + varitettavaNakyma.id).children("business-function").filter(fth).each(function (obj) {
+    if (!fth(obj)) obj.fillColor = null;
+    else {
+      obj.fillColor = "#eeeeee";
+      if (onLapsia(obj)) obj.fontColor = "#0000cc";
     }
-    if (onLapsia(obj)) obj.fontColor = "#0000cc";
-  }
-});
+  });
+
+  // Organisaatiot
+
+  $("#" + varitettavaNakyma.id).children("business-actor").filter(fth).each(function (obj) {
+    if (!fth(obj)) obj.fillColor = null;
+    else {
+      if (obj.prop("Sisäinen/ulkoinen") != "ulkoinen") {
+        obj.fillColor = "#cccccc"; // sisäinen
+      } else {
+        obj.fillColor = "#cccc99"; // ulkoinen
+      }
+      if (onLapsia(obj)) obj.fontColor = "#0000cc";
+    }
+  });
 
 
-// Viivan väri
+  // Viivan väri
 
-$("#"+varitettavaNakyma.id).children("relationship").each(function(rel) {
-  if (fth(rel.source) && fth(rel.target)) {
-    rel.setLabelExpression("");
-    rel.lineColor = "#000099";
-    if (rel.name && rel.type == "serving-relationship" && rel.target.type == "business-process" && (rel.source.type == "application-component" || rel.source.type == "product")) {
-      rel.setLabelExpression("${property:PIILOTETAAN}");  // tämän tarkoitus on piilottaa relaation nimen näkyminen kuvassa - nimi näkyy kuitenkin yhteydet-listauksessa
-      rel.lineColor = "#3366FF";
-    } else if (rel.source.type == "application-component" && rel.target.type == "application-component") {
+  $("#" + varitettavaNakyma.id).children("relationship").each(function (rel) {
+    if (fth(rel.source) && fth(rel.target)) {
+      rel.setLabelExpression("");
+      rel.lineColor = "#000099";
+      if (rel.name && rel.type == "serving-relationship" && rel.target.type == "business-process" && (rel.source.type == "application-component" || rel.source.type == "product")) {
+        rel.setLabelExpression("${property:PIILOTETAAN}");  // tämän tarkoitus on piilottaa relaation nimen näkyminen kuvassa - nimi näkyy kuitenkin yhteydet-listauksessa
+        rel.lineColor = "#3366FF";
+      } else if (rel.source.type == "application-component" && rel.target.type == "application-component") {
         rel.setLabelExpression("${name}${property:Epävarmuus}")
-    }
-  } else rel.lineColor = null;
-});
+      }
+    } else rel.lineColor = null;
+  });
+
+}

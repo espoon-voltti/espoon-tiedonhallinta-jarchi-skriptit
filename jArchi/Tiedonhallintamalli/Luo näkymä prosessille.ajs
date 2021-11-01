@@ -7,11 +7,12 @@
  * näkymien korvaamista uusilla.
  */
 
-"use //strict";
+"use strict";
 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 var maxaliprosessienyhteyksia = 25;
 
@@ -316,9 +317,8 @@ valinta.each(function(element) {
     });
   }
   
-  recycledViewFinishRecycling(viewObj);  
-  varitettavaNakyma = nakyma;
-  load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+  recycledViewFinishRecycling(viewObj);
+  varitaNakyma(nakyma);
   
   console.log("... luotu.");
 

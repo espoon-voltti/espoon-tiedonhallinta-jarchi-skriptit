@@ -2,9 +2,11 @@
  * New Archi Script
  */
 
+"use strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 var korvaakaikki;
 if (!korvaakaikki) korvaakaikki = 0;
@@ -144,8 +146,7 @@ valinta.each(function(element) {
   juoksevay += 2 * kuviovaliy;
 
   recycledViewFinishRecycling(viewObj);  
-  varitettavaNakyma = nakyma;
-  load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+  varitaNakyma(nakyma);
   
   console.log("... luotu.");
 

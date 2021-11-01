@@ -2,9 +2,11 @@
  * New Archi Script
  */
  
+"use strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 var maxaliprosessienyhteyksia = 25;
 
@@ -186,9 +188,8 @@ valinta.each(function(element) {
   juoksevay += Math.round((kuvionkorkeus + kuviovaliy)/2);
 
   //console.log("Viimeistellään...");
-  recycledViewFinishRecycling(viewObj);  
-  varitettavaNakyma = nakyma;
-  load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+  recycledViewFinishRecycling(viewObj);
+  varitaNakyma(nakyma);
   
   console.log("... luotu.");
 

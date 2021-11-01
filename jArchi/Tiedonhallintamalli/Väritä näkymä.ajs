@@ -3,8 +3,9 @@
  * tai jos valittuna on kansioita, kaikille niiden sisällä oleville näkymille.
  */
 
-"use //strict";
+"use strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 console.log(">>> Aloitetaanpas väritys... " + (new Date()).toISOString());
 var valinta = $("empty");
@@ -40,9 +41,8 @@ valittavatElementit.each(function(element) {
 });
 
 
-valinta.each(function(nakyma) {
-  varitettavaNakyma = nakyma;
-  load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+valinta.each(function (nakyma) {
+  varitaNakyma(nakyma);
 });
 
 console.log("<<<");

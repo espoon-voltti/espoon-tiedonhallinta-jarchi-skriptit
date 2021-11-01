@@ -2,9 +2,11 @@
  * New Archi Script
  */
 
+"use strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 console.show();
 console.log(">>> Tietovarantokartan luonti...");
@@ -108,8 +110,7 @@ for (var h = 0; h < toimialalista.length; h++) {
 }
 
 recycledViewFinishRecycling(viewObj);
-varitettavaNakyma = nakyma;
-load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+varitaNakyma(nakyma);
 
 console.log("<<<");
 console.log("");

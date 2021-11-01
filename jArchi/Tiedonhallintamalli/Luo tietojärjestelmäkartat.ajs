@@ -3,37 +3,38 @@
  * olemassa olevat järjestelmäkartat poistetaan ensin (jos on), ja luodaan sitten uudelleen.
  */
 
+"use strict";
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 var aikaleima = (new Date()).format("isoDateTime");
 console.show();
 console.log(">>> Tietojärjestelmäkarttojen luonti " + aikaleima);
 if (!window.confirm("Tämä poistaa ja luo uudestaan kaikki tietojärjestelmäkartat. Jatketaanko?")) exit();
 
-views = $("folder.Views").first();
-tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintamalli").first();
+var views = $("folder.Views").first();
+var tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintamalli").first();
 if (tiedonhallintamalliFolder == null) {
   tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
 }
-tietojarjestelmatFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tietojärjestelmät").first();
+var tietojarjestelmatFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tietojärjestelmät").first();
 if (tietojarjestelmatFolder == null) {
   tietojarjestelmatFolder = tiedonhallintamalliFolder.createFolder("Tietojärjestelmät");
 }
 
-toimialaMap = {};
-jarjMap = {}
+var toimialaMap = {};
+var jarjMap = {}
 
-relaatiot = $("business-actor").filter(fth).outRels(".vastaa").filter(function (rel) {
-  ratkaisu = rel.target.type == "application-component" && fth(rel.target);
-  return ratkaisu;
+var relaatiot = $("business-actor").filter(fth).outRels(".vastaa").filter(function (rel) {
+  return rel.target.type == "application-component" && fth(rel.target);
 });
-relaatiot.sort(function (left, right) { orgcmp = namecompare(left.source, right.source); return orgcmp ? orgcmp : namecompare(left.target, right.target); });
+relaatiot.sort(function (left, right) { var orgcmp = namecompare(left.source, right.source); return orgcmp ? orgcmp : namecompare(left.target, right.target); });
 relaatiot.each(function (rel) {
-  org = rel.source;
-  jarj = rel.target;
-  tomiala = "Muut";
+  var org = rel.source;
+  var jarj = rel.target;
+  var tomiala = "Muut";
   if (org.prop("Toimiala")) toimiala = org.prop("Toimiala");
   if (org.prop("Sisäinen/ulkoinen") == "ulkoinen") toimiala = "Ulkoiset";
   if (!toimialaMap[toimiala]) {
@@ -47,15 +48,15 @@ relaatiot.each(function (rel) {
 });
 
 console.log("> Lasketaan ja päivitetään järjestelmien prosessien ja liittymien määrät, kestää hetken, kärsivällisyyttä...");
-jarjSalkkuMap = {};
-jarjestelmat = $("application-component").filter(fth);
+var jarjSalkkuMap = {};
+var jarjestelmat = $("application-component").filter(fth);
 jarjestelmat.sort(namecompare);
 jarjestelmat.each(function (jarj) {
   jarj.prop("_Prosesseja", $("#"+jarj.id).outRels("serving-relationship").targetEnds("business-process").filter(fth).size());
   jarj.prop("_Liittymiä", $("#"+jarj.id).rels("flow-relationship").filter(fth).targetEnds("application-component").size()); 
   if (jarj.prop("Järjestelmäsalkku ID")) {  // tarkistetaan mahdolliset salkku-duplikaatit samalla...
     if (jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")]) {
-      herja = "Löytyi useita järjestelmiä samalla Järjestelmäsalkku ID:llä, mm. " + jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")].name + " ja " + jarj.name + ". Tämä olisi syytä korjata manuaalisesti.";
+      var herja = "Löytyi useita järjestelmiä samalla Järjestelmäsalkku ID:llä, mm. " + jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")].name + " ja " + jarj.name + ". Tämä olisi syytä korjata manuaalisesti.";
       console.error(herja);
       if (!window.confirm(herja + " Jatketaanko?")) exit();
     }
@@ -80,7 +81,7 @@ jarjestelmat.each(function (jarj) {
 //  }
 //});
 
-for (toimiala in toimialaMap) {
+for (var toimiala in toimialaMap) {
   var toimialanimi = toimialanNimi(toimiala) ? toimialanNimi(toimiala) : toimiala;
   console.log("> Luodaan järjestelmäkarttaa " + toimiala + " (" + toimialanimi + ")");
   var existing = [];
@@ -97,11 +98,11 @@ for (toimiala in toimialaMap) {
   
   notekorkeus = 50; // oletuksesta poikkeava
   kuvioitamaxrivi = Math.floor((kokoleveys - 4*reunusx - + kuviovalix) / (kuvionleveys+kuviovalix)); // oletuksesta poikkeava
-  grouptopy = 50;
-  groupleveys = 2*reunusx + kuvioitamaxrivi * (kuvionleveys + kuviovalix) - kuviovalix;
+  var grouptopy = 50;
+  var groupleveys = 2*reunusx + kuvioitamaxrivi * (kuvionleveys + kuviovalix) - kuviovalix;
 
-  juoksevay = reunusy;
-  note = createRecycledObject(viewObj, "note-1", "diagram-model-note", reunusx + Math.round((groupleveys - noteleveys) / 2), juoksevay, noteleveys, notekorkeus);
+  var juoksevay = reunusy;
+  var note = createRecycledObject(viewObj, "note-1", "diagram-model-note", reunusx + Math.round((groupleveys - noteleveys) / 2), juoksevay, noteleveys, notekorkeus);
   note.setText(nakyma.name);
   note.fontStyle = "bold";
   note.fontSize = 12;
@@ -109,15 +110,15 @@ for (toimiala in toimialaMap) {
   note.textPosition = TEXT_POSITION.CENTER;
   juoksevay += notekorkeus + kuviovaliy;
 
-  for (org in toimialaMap[toimiala]) {
-    jarjestelmat = toimialaMap[toimiala][org];
-    riveja = Math.ceil(jarjestelmat.length / kuvioitamaxrivi);
-    group = createRecycledObject(viewObj, "group-" + org, "diagram-model-group", reunusx, juoksevay, groupleveys, grouptopy + riveja * (kuvionkorkeus + kuviovaliy));
+  for (var org in toimialaMap[toimiala]) {
+    var jarjestelmat = toimialaMap[toimiala][org];
+    var riveja = Math.ceil(jarjestelmat.length / kuvioitamaxrivi);
+    var group = createRecycledObject(viewObj, "group-" + org, "diagram-model-group", reunusx, juoksevay, groupleveys, grouptopy + riveja * (kuvionkorkeus + kuviovaliy));
     group.name = org;
     juoksevay += grouptopy;
-    juoksevax = 2 * reunusx;
-    xcnt = 1;
-    for (i = 0; i < jarjestelmat.length; i++) {
+    var juoksevax = 2 * reunusx;
+    var xcnt = 1;
+    for (var i = 0; i < jarjestelmat.length; i++) {
       recycledViewAddElement(viewObj, jarjestelmat[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
       juoksevax += kuvionleveys + kuviovalix;
       xcnt++;
@@ -132,8 +133,7 @@ for (toimiala in toimialaMap) {
   }
 
   recycledViewFinishRecycling(viewObj);
-  varitettavaNakyma = nakyma;
-  load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+  varitaNakyma(nakyma);
 }
 
 console.log("<<<");
