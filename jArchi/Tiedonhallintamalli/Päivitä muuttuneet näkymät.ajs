@@ -1,0 +1,166 @@
+﻿/*
+ * Selvitetään, missä näkymissä olevat kohteet ovat muuttuneet ja tulisi siten päivittää. Päivitetään
+ * muuttuneet näkymät.
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäProsessille.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTietovarannolle.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTietojärjestelmälle.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTehtäväluokalle.ajs");
+
+var aloitus = new Date();
+console.show();
+console.log(">>> Aloitetaan näkymien päivittäminen... " + aloitus.format("isoDateTime"));
+
+console.log("> Käydään läpi prosessien tiedot");
+var prosessit = {};
+$("business-process").filter(fth).each(function (elem) {
+  var tiedot = prosessit[elem.id] = {};
+  tiedot.elem = elem;
+  tiedot.muuttunut = elem.prop("_Muuttunut");
+});
+$("business-process").filter(fth).outRels("specialization-relationship").each(function (rel) {
+  var tiedot = prosessit[rel.source.id];
+  tiedot.ylaelemid = rel.target.id;
+});
+
+console.log("> Käydään läpi tietovarantojen tiedot");
+var tietovarannot = {};
+$("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (elem) {
+  var tiedot = tietovarannot[elem.id] = {};
+  tiedot.elem = elem;
+  tiedot.muuttunut = elem.prop("_Muuttunut");
+});
+
+console.log("> Käydään läpi tietojärjestelmien tiedot");
+var tietojarjestelmat = {};
+$("application-component").filter(fth).each(function (elem) {
+  var tiedot = tietojarjestelmat[elem.id] = {};
+  tiedot.elem = elem;
+  tiedot.muuttunut = elem.prop("_Muuttunut");
+});
+
+console.log("> Käydään läpi tehtäväluokkien tiedot");
+var tehtavaluokat = {};
+$("business-function").filter(fth).each(function (elem) {
+  var tiedot = tehtavaluokat[elem.id] = {};
+  tiedot.elem = elem;
+  tiedot.muuttunut = elem.prop("_Muuttunut");
+  //var ylaTeht = $("#" + elem.id).outRels("specialization-relationship").targetEnds().first();
+  //if (ylaTeht) tiedot.ylaelemid = ylaTeht.id;
+});
+$("business-function").filter(fth).outRels("specialization-relationship").each(function (rel) {
+  var tiedot = tehtavaluokat[rel.source.id];
+  tiedot.ylaelemid = rel.target.id;
+});
+
+var ikilaskuri;
+
+function propagoiYlos(elemmap, elemid) {
+  if (ikilaskuri++ > 20) {
+    console.error("Ollaan ilmeisesti ikiloopissa, validoi malli");
+    exit();
+  }
+  var ylaelemid = elemmap[elemid].ylaelemid;
+  if (ylaelemid) {
+    if (elemmap[ylaelemid].muuttunut < elemmap[elemid].muuttunut) {
+      elemmap[ylaelemid].muuttunut = elemmap[elemid].muuttunut;
+      propagoiYlos(elemmap, ylaelemid);
+    }
+  }
+}
+
+console.log("> Huomioidaan muutokset yläprosesseissa");
+for (var prosid in prosessit) {
+  ikilaskuri = 0;
+  propagoiYlos(prosessit, prosid);
+}
+
+console.log("> Huomioidaan muutokset ylätehtäväluokissa");
+for (var tehtid in tehtavaluokat) {
+  ikilaskuri = 0;
+  propagoiYlos(tehtavaluokat, tehtid);
+}
+
+console.log("> Käydään läpi näkymien tiedot");
+var orvotNakymat = [];
+$("view").filter(fth).each(function (view) {
+  var kohdeid = view.prop("_KuvattavaKohde");
+  if (!kohdeid) return;  // ei tiedonhallintamallin 360-näkymä
+  var luotu = view.prop("_Luotu");
+  var tiedot = null;
+  if (prosessit[kohdeid]) tiedot = prosessit[kohdeid];
+  else if (tietovarannot[kohdeid]) tiedot = tietovarannot[kohdeid];
+  else if (tietojarjestelmat[kohdeid]) tiedot = tietojarjestelmat[kohdeid];
+  else if (tehtavaluokat[kohdeid]) tiedot = tehtavaluokat[kohdeid];
+  if (tiedot) {
+    if (tiedot.nakymaLuotu) {  // jos löytyy duplikaatteja näkymiä samalle kohteelle, valitaan vanhin ajankohta
+      if (luotu < tiedot.nakymaLuotu) tiedot.nakymaLuotu = luotu;
+    } else {
+      tiedot.nakymaLuotu = luotu;
+    }
+  } else {
+    orvotNakymat.push(view);
+  }
+});
+
+var laskuri = 0;
+
+console.log("> Päivitetään muuttuneet prosessien näkymät...");
+for (var prosid in prosessit) {
+  var tiedot = prosessit[prosid];
+  if (!tiedot.nakymaLuotu || null2e(tiedot.muuttunut) > tiedot.nakymaLuotu) {
+    luoNakymaProsessille(tiedot.elem);
+    laskuri++;
+  }
+}
+
+console.log("> Päivitetään muuttuneet tietovarantojen näkymät...");
+for (var tvid in tietovarannot) {
+  var tiedot = tietovarannot[tvid];
+  if (!tiedot.nakymaLuotu || null2e(tiedot.muuttunut) > tiedot.nakymaLuotu) {
+    luoNakymaTietovarannolle(tiedot.elem);
+    laskuri++;
+  }
+}
+
+console.log("> Päivitetään muuttuneet tietojärjestelmien näkymät...");
+for (var jarjid in tietojarjestelmat) {
+  var tiedot = tietojarjestelmat[jarjid];
+  if (!tiedot.nakymaLuotu || null2e(tiedot.muuttunut) > tiedot.nakymaLuotu) {
+    luoNakymaTietojarjestelmalle(tiedot.elem);
+    laskuri++;
+  }
+}
+
+console.log("> Päivitetään muuttuneet tehtäväluokkien näkymät...");
+for (var tehtid in tehtavaluokat) {
+  var tiedot = tehtavaluokat[tehtid];
+  if (!tiedot.nakymaLuotu || null2e(tiedot.muuttunut) > tiedot.nakymaLuotu) {
+    luoNakymaTehtavaluokalle(tiedot.elem);
+    laskuri++;
+  }
+}
+
+var lopetus = new Date();
+var kestosek = Math.floor((lopetus - aloitus) / 1000);
+
+if (orvotNakymat.length > 0) {
+  var orvotlista = "";
+  for (var i = 0; i < orvotNakymat.length; i++) {
+    orvotlista += "- " + orvotNakymat[i].name + "\n";
+  }
+  if (window.confirm("Löydettiin " + orvotNakymat.length + " orpoa näkymää. Poistetaanko ne?\n" + orvotlista)) {
+    for (var i = 0; i < orvotNakymat.length; i++) {
+      console.log("- Poistetaan näkymää " + orvotNakymat[i]);
+      orvotNakymat[i].delete();
+    }
+  }
+}
+
+console.log("> Valmis. Päivitettiin " + laskuri + " näkymää, kesto " + Math.floor(kestosek / 60) + " min " + (kestosek % 60) + " s.");
+console.log("<<<");
+console.log("");
