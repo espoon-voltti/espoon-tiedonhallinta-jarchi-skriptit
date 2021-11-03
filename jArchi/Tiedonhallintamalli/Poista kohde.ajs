@@ -1,0 +1,64 @@
+﻿/*
+ * Tämä skripti poistaa tiedonhallintamallin kohteen, esim. poistuneen salkusta poistuneen tietojärjestelmän 
+ * tai IMS:stä poistuneen prosessin tai ylimääräiseksi jääneen tietovarannon tms.
+ */
+
+"use strict"; 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
+console.log(">>> Aloitetaan kohteiden poistaminen... ");
+
+var kohteet = [];
+var aikaleima = (new Date()).format("isoDateTime");
+
+$(selection).each(function (elem) {
+  elem = elem.concept ? elem.concept : elem;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+  if (elem.type == "archimate-diagram-model" && elem.prop("_KuvattavaKohde")) {  // jos valittuna näkymä, tulkitaan tarkoitetun näkymän kohdetta
+    elem = $("#" + elem.prop("_KuvattavaKohde")).first();
+  }
+  if (!fth(elem)) {
+    console.error("Kohde ei kuulu tiedonhallintamalliin: " + elem + ", ohitetaan.");
+    return;
+  }
+  if (elem.type == "business-process") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "product" && elem.prop("_Tietovaranto") == "1") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "application-component") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "business-function") {
+    kohteet.push(elem);
+    return;
+  }
+  if (elem.type == "business-actor") {
+    kohteet.push(elem);
+    return;
+  }
+  console.error("Valittu kohde ei ole prosessi, tietovaranto, tietojärjestelmä, tehtäväluokka tai organisaatio: " + elem + ", ei voida jatkaa.");
+});
+
+if (!window.confirm("Olet poistamassa " + kohteet.length + " kohdetta. Jatketaanko?")) {
+  console.log("> Keskeytetty");
+  exit();
+}
+
+for (var i = 0; i < kohteet.length; i++) {
+  $("#" + kohteet[i].id).rels().each(function (rel) {
+    muuttunutMerkinta(rel.source, rel.target, aikaleima);  // kohde itse tulee merkattua useamman kerran ennen poistamista, mutta eipä haittaa...
+  });
+  console.log("- Poistetaan kohde " + kohteet[i]);
+  kohteet[i].delete();
+}
+
+console.log("> Valmis. Muista päivittää näkymä(t)!");
+
+console.log("<<<");
+console.log("");

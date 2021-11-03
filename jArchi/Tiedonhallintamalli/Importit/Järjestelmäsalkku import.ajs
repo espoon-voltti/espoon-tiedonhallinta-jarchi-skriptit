@@ -65,6 +65,7 @@ function luoVapaatekstiJarjestelma(jarjnimi) {
   jarj.prop("_NimiSalkussa", jarjnimi);
   jarj.prop("Omistaja", "Tietohallinnon vapaatekstit");
   jarj.prop("_Päivitetty", aikaleima);
+  muuttunutMerkinta(jarj, null, aikaleima);
   jarjNimiMap[jarjnimi] = jarj;
   muuttuneetJarj[jarj.id] = "1";
   return jarj;
@@ -179,6 +180,7 @@ if (filePath) {
         nykyJarj.prop("Järjestelmäsalkku ID", salkkuId);
         nykyJarj.prop("Järjestelmäsalkku-linkki", salkkuUrl.replace("[SALKKUID]", salkkuId));
         nykyJarj.prop("_Päivitetty", aikaleima);
+        muuttunutMerkinta(nykyJarj, null, aikaleima);
         muuttuneetJarj[nykyJarj.id] = "1";
 	console.log("+ Lisätty uusi järjestelmä " + nykyJarj.name);
       }
@@ -342,6 +344,7 @@ if (filePath) {
           } else {
             if (!toinenJarj) toinenJarj = luoVapaatekstiJarjestelma(liitRivi["Järj/ muu liittymä"]);
             nykyRel = model.createRelationship("flow-relationship", paatiedot, toinenJarj, nykyJarj);
+            muuttunutMerkinta(toinenJarj, nykyJarj, aikaleima);
             console.log("+ Lisätään luku-liittymä järjestelmästä " + nykyRel.source.name + " järjestelmään " + nykyRel.target.name + ", tiedot " + nykyRel.name);
             nykyRel.prop("_Tiedonhallintamalli", "1");
             nykyRel.prop("_Päivitetty", aikaleima);
@@ -365,6 +368,7 @@ if (filePath) {
           } else {
             if (!toinenJarj) toinenJarj = luoVapaatekstiJarjestelma(liitRivi["Järj/ muu liittymä"]);
             nykyRel = model.createRelationship("flow-relationship", paatiedot, nykyJarj, toinenJarj);
+            muuttunutMerkinta(nykyJarj, toinenJarj, aikaleima);
             console.log("+ Lisätään kirjoitus-liittymä järjestelmästä " + nykyRel.source.name + " järjestelmään " + nykyRel.target.name + ", tiedot " + nykyRel.name);
             nykyRel.prop("_Tiedonhallintamalli", "1");
             nykyRel.prop("_Päivitetty", aikaleima);
@@ -455,24 +459,25 @@ if (filePath) {
         }
       }
 
-      var poistaminen = 0;
+      //var poistaminen = 0;
       for (var relId in nykyRelList) {  // relaatiot, joita ei enää näy salkussa -> jätetään mutta merkitään tiedonhallintamallin ulkopuolisiksi
         if ($("#" + relId).first().prop("_ArchissaLisätty")) continue;  // ohitetaan jos ko. property asetettu
-        if (!poistaminen) {
+        /* if (!poistaminen) {
           poistaminen = window.confirm("Poistetaanko poistuneet relaatiot kokonaan? Muuten vain merkitään poistuneiksi.") ? 1 : 2;
-        }
+        } */
         var vanhaRel = nykyRelList[relId];
         muuttuneetJarj[vanhaRel.source.id] = "1";
         muuttuneetJarj[vanhaRel.target.id] = "1";
-        if (poistaminen == 1) {
+        muuttunutMerkinta(vanhaRel.source, vanhaRel.target, aikaleima);
+        // if (poistaminen == 1) {
           console.log("  - POISTETTIIN relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
           vanhaRel.delete();
-        } else {
+        /* } else {
           vanhaRel.removeProp("_Tiedonhallintamalli");
           vanhaRel.prop("_PoistunutSalkusta", "1");
           vanhaRel.prop("_Päivitetty", aikaleima);
           console.log("  - MERKITÄÄN POISTUNEEKSI relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
-        }
+        }*/
       }
 
     } else console.log("> Liittymä-CSV jätettiin valitsematta, ohitetaan");  // if filePath liittymä-csv:lle

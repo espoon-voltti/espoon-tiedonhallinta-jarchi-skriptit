@@ -65,8 +65,7 @@ if (prosessit.length) {
       } else {
         console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietovarantoon " + tietovarannot[j]);
         model.createRelationship("serving-relationship", "", tietovarannot[j], prosessit[i]);
-        tietovarannot[j].prop("_Päivitetty", aikaleima);
-        prosessit[i].prop("_Päivitetty", aikaleima);
+        muuttunutMerkinta(tietovarannot[j], prosessit[i], aikaleima);
         laskuri++;
       }
     }
@@ -76,8 +75,7 @@ if (prosessit.length) {
       } else {
         console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietojärjestelmään " + tietojarjestelmat[j]);
         model.createRelationship("serving-relationship", "", tietojarjestelmat[j], prosessit[i]);
-        tietojarjestelmat[j].prop("_Päivitetty", aikaleima);
-        prosessit[i].prop("_Päivitetty", aikaleima);
+        muuttunutMerkinta(tietojarjestelmat[j], prosessit[i], aikaleima);
         laskuri++;
       }
     }
@@ -98,8 +96,7 @@ if (tietovarannot.length && tietojarjestelmat.length) {
         } else {
           console.log("- Luodaan yhteys tietojärjestelmästä " + tietojarjestelmat[i] + " tietovarantoon " + tietovarannot[j]);
           model.createRelationship("serving-relationship", "", tietojarjestelmat[i], tietovarannot[j]);
-          tietojarjestelmat[i].prop("_Päivitetty", aikaleima);
-          tietovarannot[j].prop("_Päivitetty", aikaleima);
+          muuttunutMerkinta(tietojarjestelmat[i], tietovarannot[j], aikaleima);
           laskuri++;
         }
       }

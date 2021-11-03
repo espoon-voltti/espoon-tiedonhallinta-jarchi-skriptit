@@ -9,7 +9,7 @@ load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 
 console.show();
-console.log(">>> Aloitetaan yhteyksien tai kohteiden poistaminen... ");
+console.log(">>> Aloitetaan yhteyksien poistaminen... ");
 
 var yhteydet = [];
 var kohteet = [];
@@ -54,8 +54,7 @@ for (var i = 0; i < yhteydet.length; i++) {
     continue;
   }
   if (window.confirm("Poistetaanko yhteys " + yhteydet[i] + " (" + yhteydet[i].source + " -> " + yhteydet[i].target + ")?")) {
-    yhteydet[i].source.prop("_Päivitetty", aikaleima);
-    yhteydet[i].target.prop("_Päivitetty", aikaleima);
+    muuttunutMerkinta(yhteydet[i].source, yhteydet[i].target, aikaleima);
     yhteydet[i].delete();
     laskuri++;
   }
@@ -70,8 +69,7 @@ for (var i = 0; i < kohteet.length - 1; i++) {
     rels.each(function (rel) {
       if (window.confirm("Poistetaanko yhteys " + rel + " (" + rel.source + " -> " + rel.target + ")?")) {
         console.log("- Poistetaan yhteys " + rel + " (" + rel.source + " -> " + rel.target + ")");
-        rel.source.prop("_Päivitetty", aikaleima);
-        rel.target.prop("_Päivitetty", aikaleima);
+        muuttunutMerkinta(rel.source, rel.target, aikaleima);
         rel.delete();
         laskuri++;
       }

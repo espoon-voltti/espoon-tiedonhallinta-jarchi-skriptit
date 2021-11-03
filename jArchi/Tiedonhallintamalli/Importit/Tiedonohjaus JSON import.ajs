@@ -212,7 +212,10 @@ for (var h = 0; h < tossit.length; h++) {
       tehtluokka.prop("_Tiedonhallintamalli", "1");
       tehtluokka.prop("Tunniste", tehtluokkakoodi);
       tehtluokka.prop("_Päivitetty", aikaleima);
-      if (parentluokka) model.createRelationship("specialization-relationship", "", tehtluokka, parentluokka);
+      if (parentluokka) {
+        model.createRelationship("specialization-relationship", "", tehtluokka, parentluokka);
+        muuttunutMerkinta(tehtluokka, parentluokka, aikaleima);
+      }
       tehtluokkaitem = {elem: tehtluokka};
       tehtavaluokkaMap[tehtluokkakoodi] = tehtluokkaitem;
       console.log("- Lisättiin tehtäväluokka " + tehtluokka + " kansioon " + kansio);
@@ -369,6 +372,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
     }
     if (!(varantonimi in nykyvarannot)) {
       model.createRelationship("serving-relationship", "", tietovarantoMap[varantonimi], tehtluokkaitem.elem);
+      muuttunutMerkinta(tietovarantoMap[varantonimi], tehtluokkaitem.elem, aikaleima);
       console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys tietovarantoon " + varantonimi);
     } else {
       delete nykyvarannot[varantonimi];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
@@ -377,7 +381,8 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
   for (var varantonimi in nykyvarannot) {
     console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem + " yhteys tietovarantoon " + varantonimi);
     $("#"+tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
-      if ($("#"+rel.id).sourceEnds().first().id == nykyvarannot[varantonimi].id) {
+      if ($("#" + rel.id).sourceEnds().first().id == nykyvarannot[varantonimi].id) {
+        muuttunutMerkinta(rel.source, rel.target, aikaleima);
         rel.delete();
         console.log("  - poistettu");
       }
