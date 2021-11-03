@@ -49,8 +49,8 @@ modelreport(model, strategyFolder, businessFolder, applicationFolder, technology
 		<nav class="navbar navbar-default">
 			<div class="navbar-header" onmouseover="this.style.cursor='pointer'" onclick="window.location.reload();">
 				<!-- home icon attribution (with modifications): https://commons.wikimedia.org/wiki/File:Home_icon_black.png -->
-				<a href="#" class="navbar-left"><img style="opacity:0.5; max-width:100px; margin-top: 7px; margin-left: 15px; margin-right: -5px;" src="img/Home_icon_black.png"/></a>
-				<span class="navbar-brand">^model.Name;format="xml-encode"^</span>
+				<a id="kotilinkki1" href="#" class="navbar-left"><img style="opacity:0.5; max-width:100px; margin-top: 7px; margin-left: 15px; margin-right: -5px;" src="img/Home_icon_black.png"/></a>
+				<a id="kotilinkki2" href="#" class="navbar-brand">^model.Name;format="xml-encode"^</a>
 			</div>
 			<div class="collapse navbar-collapse">
 				<ul class="nav navbar-nav navbar-right">
@@ -60,7 +60,7 @@ modelreport(model, strategyFolder, businessFolder, applicationFolder, technology
 		</nav>
 	</div>
 
-	<iframe name="view" class="ui-layout-center" src="^model.Id^/elements/model.html" scrolling="no"></iframe>
+	<iframe id="view" name="view" class="ui-layout-center" src="^model.Id^/elements/model.html" scrolling="no"></iframe>
 
 	<div class="ui-layout-west">
 		<iframe name="element" class="ui-layout-south" src="elements/empty-element.html"  scrolling="no"></iframe>
@@ -144,6 +144,23 @@ modelreport(model, strategyFolder, businessFolder, applicationFolder, technology
         Espoo poistanut käytöstä PÄÄTTYY -->
 	<!-- END HINT MODAL DIALOG -->
 </body>
+<script>
+	let kotilinkki1 = document.getElementById("kotilinkki1");
+    let kotilinkki2 = document.getElementById("kotilinkki2");
+	kotilinkki1.href = kotilinkki2.href = window.location.origin + window.location.pathname;
+
+	getParameter = (key) => {
+		address = window.location.search;
+		parameterList = new URLSearchParams(address);
+		return parameterList.get(key);
+    }
+
+	let viewId = getParameter("view");
+	if (viewId) {
+		let viewFrame = document.getElementById("view");
+        viewFrame.src = "^model.Id^/views/" + viewId + ".html";
+    }
+</script>
 </html>
 >>
 
