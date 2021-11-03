@@ -31,7 +31,8 @@ var imskentat = {
   "Lopputuotos (palvelu/asiakirja) *": "Prosessissa syntyvä lopputuotos",
   "Prosessi saa syötteitä *": "Saa syötteitä",
   "Prosessi tuottaa syötteitä *": "Tuottaa syötteitä",
-  "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto"
+  "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto",
+  "Koskee asianhallintaa *": "_Koskee asianhallintaa IMS"
 };
 
 function siisti(arvo) {
@@ -258,6 +259,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     nykyPros.prop("_Päivitetty", aikaleima);
     nykyPros.prop("_TunnistePäivitetty", aikaleima);
     nykyPros.prop("_NimiPäivitetty", aikaleima);
+    muuttunutMerkinta(nykyPros, null, aikaleima);
     muuttuneetPros[nykyPros.id] = "1";
     kaikkiProsImsIdMap[imsId] = nykyPros;
     nykyProsMap[imsId] = nykyPros;
@@ -290,8 +292,10 @@ for (var i = 0; i < valitutRivit.length; i++) {
     herjaa(huomioLista, "PROSESSIN TUNNISTE MUUTTUU", "Vanha: \"" + nykyPros.prop("Tunniste") + "\", uusi: \"" + tunniste + "\"",
       imsId, tunniste, nimi, nykyPros, HERJA_VAROITUSIKKUNA);
     vanha["Tunniste"] = nykyPros.prop("Tunniste");
+    delete prosTunnisteMap[nykyPros.prop("Tunniste")];
     muutos["Tunniste"] = tunniste;
     nykyPros.prop("Tunniste", tunniste);
+    prosTunnisteMap[tunniste] = nykyPros;
     nykyPros.prop("_TunnistePäivitetty", aikaleima);
     var vanhatunniste = nykyPros.prop("_VanhaTunniste") ? nykyPros.prop("_VanhaTunniste") + "; " : "";
     nykyPros.prop("_VanhaTunniste", vanhatunniste + vanha["Tunniste"]);
@@ -412,11 +416,12 @@ for (var i = 0; i < valitutRivit.length; i++) {
         else {
           vanha["Yläprosessi"] = rel.target;
           rel.delete();
+          muuttunutMerkinta(nykyPros, ylaPros, aikaleima);
         }
       });
       if (!loytyi) {
         model.createRelationship("specialization-relationship", "", nykyPros, ylaPros);
-        muutos["Yläprosessi"] = ylaPros;
+        muuttunutMerkinta(nykyPros, ylaPros, aikaleima);
       }
     }
   }
@@ -426,7 +431,10 @@ for (var i = 0; i < valitutRivit.length; i++) {
     var syotePros = prosTunnisteMap[match[1]];
     if (syotePros) {
       if (!syoteLahdeMap[syotePros.id]) syoteLahdeMap[syotePros.id] = {};
-      syoteLahdeMap[syotePros.id][nykyPros.id] = nykyPros;
+      var tiedot = syoteLahdeMap[syotePros.id][nykyPros.id];
+      if (!tiedot) tiedot = syoteLahdeMap[syotePros.id][nykyPros.id] = {};
+      tiedot.kohdePros = nykyPros;
+      tiedot.kohteelta = true;
     } else {
       herjaa(huomioLista, "Prosessille merkitty saatava syöte, jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan).", match[1],
         imsId, tunniste, nimi, nykyPros, HERJA_KONSOLIINFO);
@@ -437,7 +445,10 @@ for (var i = 0; i < valitutRivit.length; i++) {
     var syotePros = prosTunnisteMap[match[1]];
     if (syotePros) {
       if (!syoteLahdeMap[nykyPros.id]) syoteLahdeMap[nykyPros.id] = {};
-      syoteLahdeMap[nykyPros.id][syotePros.id] = syotePros;
+      var tiedot = syoteLahdeMap[nykyPros.id][syotePros.id];
+      if (!tiedot) tiedot = syoteLahdeMap[nykyPros.id][syotePros.id] = {};
+      tiedot.kohdePros = syotePros;
+      tiedot.lahteelta = true;
     } else {
       herjaa(huomioLista, "Prosessille merkitty tuotettava syöte, jota vastaavaa prosessia ei löydy tunnisteella (ohitetaan).", match[1],
         imsId, tunniste, nimi, nykyPros, HERJA_KONSOLIINFO);
@@ -462,23 +473,38 @@ for (var i = 0; i < valitutRivit.length; i++) {
 }  // CSV-rivien looppi
 
 console.log("> Käsitellään syötteet");
-for (var lahdeProsId in syoteLahdeMap) {
-  var lahdePros = $("#" + lahdeProsId).first();
-  var kohdeMap = syoteLahdeMap[lahdeProsId];
-  $("#"+lahdeProsId).outRels("flow-relationship.syöte").each(function (rel) {
-    if (kohdeMap[rel.target.id]) {
-      delete kohdeMap[rel.target.id];
-    } else {
-      console.log("Prosessi " + rel.target.name + " ei saa enää syötettä prosessilta " + rel.source.name + ", poistetaan relaatio.");
-      rel.delete();
+$("business-process").filter(fth).each(function (pros) {
+  if (syoteLahdeMap[pros.id]) {
+    var kohdeMap = syoteLahdeMap[pros.id];
+    $("#" + pros.id).outRels("flow-relationship").each(function (rel) {
+      if (kohdeMap[rel.target.id]) {
+        // SEURAAVAT 2 RIVIÄ VOINEE POISTAA SITTEN KUN PÄIVITETTY KERRAN?
+        var tiedot = kohdeMap[rel.target.id];
+        rel.name = (tiedot.lahteelta ? "." : "") + "syöte" + (tiedot.kohteelta ? "." : "");
+        delete kohdeMap[rel.target.id];
+      } else {
+        console.log("Prosessi " + rel.target.name + " ei saa enää syötettä prosessilta " + rel.source.name + ", poistetaan relaatio.");
+        muuttunutMerkinta(rel.source, rel.target, aikaleima);
+        rel.delete();
+      }
+    });
+    for (var puuttuvaId in kohdeMap) {
+      var tiedot = kohdeMap[puuttuvaId];
+      console.log("Lisätään uusi syöterelaatio prosessista " + pros.name + " prosessiin " + tiedot.kohdePros.name);
+      model.createRelationship("flow-relationship",
+        (tiedot.lahteelta ? "." : "") + "syöte" + (tiedot.kohteelta ? "." : ""),
+        pros,
+        tiedot.kohdePros);
+      muuttunutMerkinta(pros, tiedot.kohdePros, aikaleima);
     }
-  });
-  for (var puuttuvaId in kohdeMap) {
-    var kohdePros = kohdeMap[puuttuvaId];
-    console.log("Lisätään uusi syöterelaatio prosessista " + lahdePros.name + " prosessiin " + kohdePros.name);
-    model.createRelationship("flow-relationship", "syöte", lahdePros, kohdePros);
+  } else {  // prosessilta ei lähde enää ollenkaan syötteitä, poistetaan mahdolliset olemassa olevat lähetävät
+    $("#" + pros.id).outRels("flow-relationship").each(function (rel) {
+      console.log("Prosessi " + rel.target.name + " ei saa enää syötettä prosessilta " + rel.source.name + ", poistetaan relaatio.");
+      muuttunutMerkinta(rel.source, rel.target, aikaleima);
+      rel.delete();
+    });
   }
-}
+});  // prosessien looppi syötteiden läpikäymiseksi
 
 console.log("> Käsitellään mahdolliset poistuneet prosessit");
 for (var poistunutId in prosArchiIdMap) {  // Jäljellä vain salkussa olleet joita ei enää näy!
