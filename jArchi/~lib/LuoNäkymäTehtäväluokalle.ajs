@@ -1,0 +1,145 @@
+﻿/*
+ * New Archi Script
+ */
+ 
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+
+function luoNakymaTehtavaluokalle(element) {
+
+  var maxaliprosessienyhteyksia = 25;
+
+  var views = $("folder.Views").first();
+  var tiedonhallintamalliFolder = $("#" + views.id).children("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalliFolder == null) {
+    tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
+  }
+  var tehtavaluokkaFolder = $("#" + tiedonhallintamalliFolder.id).children("folder.Tehtäväluokat").first();
+  if (tehtavaluokkaFolder == null) {
+    tehtavaluokkaFolder = tiedonhallintamalliFolder.createFolder("Tehtäväluokat");
+  }
+
+  function varmistaKansio(tehtluokka) {
+    var ylaluokka = $("#" + tehtluokka.id).outRels("specialization-relationship").targetEnds("business-function").filter(fth).first();
+    var ylafolder = ylaluokka == null ? tehtavaluokkaFolder : varmistaKansio(ylaluokka);
+    var nextfolder = $("#" + ylafolder.id).children("folder." + tehtluokka.name).first();
+    if (nextfolder == null) {
+      nextfolder = ylafolder.createFolder(tehtluokka.name);
+    }
+    return nextfolder;
+  }
+
+  console.log("Luodaan näkymää tehtäväluokalle " + element.name + "...");
+
+  var ylaluokka = $("#" + element.id).outRels("specialization-relationship").targetEnds("business-function").filter(fth).first();
+  var folder = ylaluokka == null ? tehtavaluokkaFolder : varmistaKansio(ylaluokka);
+
+  var onjo = $("view").filter(function (view) { return view.prop("_KuvattavaKohde") == element.id; });
+  onjo = onjo.add($("#" + folder.id).children("view." + element.name).not(onjo));
+
+  /*var korvaa = true;
+  if (onjo.size() > 0) {
+    if (!korvaakaikki) {
+      korvaa = window.confirm("Tehtäväluokalla " + element.name + " on jo näkym(i)ä. Korvataanko? (Muutoin tehdään uusi rinnalle)");
+      if (korvaa && valinta.size() > 1) {
+        var resp2 = window.confirm("Korvataanko kaikki loput? Muutoin kysytään yksitellen.");
+        if (resp2) korvaakaikki = 1;
+      }
+    }
+  }*/
+
+  var viewObj = createOrRecycleArchimateView(onjo, element.name, folder, true);
+  var nakyma = viewObj.view;
+  nakyma.prop("_KuvattavaKohde", element.id);
+  nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+  nakyma.prop("_Tiedonhallintamalli", "1");
+  nakyma.documentation = "Ks. tehtäväluokka-elementin dokumentaatio"; //element.documentation;
+  element.prop("_OmaNäkymä", nakyma.id);
+  var juoksevay = reunusy;
+
+  var ylaluokkaObj = null;
+  if (ylaluokka) {
+    ylaluokkaObj = recycledViewAddElement(viewObj, ylaluokka, keskitax(1, 1), juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+
+  //console.log("Lisätään tietovarannot...");
+  var tietovarannot = $("#" + element.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" }));
+  tietovarannot.sort(namecompare);
+  var varantonum = Math.ceil(tietovarannot.size() / 2);
+  var varantokorkeus = varantonum * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
+  varantokorkeus = Math.max(varantokorkeus, 2 * kuvionkorkeus); // vähän extra tilaa itse prosessille
+  //console.log("tietovarannot.size() = " + tietovarannot.size() + ", varantonum = " + varantonum + ", varantokorkeus = " + varantokorkeus);
+  // lisätään käsillä oleva prosessi keskelle
+  var tehtluokkaObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), keskitay(juoksevay, varantokorkeus, 1, 1), kuvionleveys, kuvionkorkeus);
+  if (ylaluokkaObj) {
+    var relaatio = $("#" + element.id).outRels("specialization-relationship").filter(function (rel) { return rel.target.id == ylaluokka.id; }).first();
+    recycledViewAddRelationship(viewObj, relaatio, tehtluokkaObj, ylaluokkaObj);
+  }
+
+  var i = 0;
+  tietovarannot.each(function (varanto) {
+    var y = keskitay(juoksevay, varantokorkeus, (i % varantonum) + 1, varantonum);
+    //console.log("juoksevay = " + juoksevay + ", i = " + i + ", varantonum = " + varantonum + ", y = " + y);
+    var varantoObj = recycledViewAddElement(viewObj, varanto, i < varantonum ? reunusx : kokoleveys - reunusx - kuvionleveys, y, kuvionleveys, kuvionkorkeus);
+    var relaatio = $("#" + element.id).inRels("serving-relationship").filter(function (rel) { return rel.source.id == varanto.id; }).first();
+    recycledViewAddRelationship(viewObj, relaatio, varantoObj, tehtluokkaObj);
+    i++;
+  });
+
+  juoksevay += varantokorkeus + kuviovaliy;
+
+  //console.log("Lisätään aliluokat...");
+  var aliluokat = $("#" + element.id).inRels("specialization-relationship").sourceEnds("business-function").filter(fth);
+  aliluokat.sort(tunnistecompare);
+  if (aliluokat.size() > 0) {
+    var rivillakpl = Math.min(kuvioitamaxrivi, aliluokat.size());
+    nykyx = 1;
+    aliluokat.each(function (elem) {
+      var aliluokkaObj = recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+      var relaatio = $("#" + elem.id).outRels("specialization-relationship").first();
+      recycledViewAddRelationship(viewObj, relaatio, aliluokkaObj, tehtluokkaObj);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+  juoksevay += kuvionkorkeus + kuviovaliy;
+
+  var prosessit = $("#" + element.id).inRels("serving-relationship").sourceEnds("business-process").filter(fth);
+  prosessit.sort(tunnistecompare);
+
+  if (prosessit.size() > 0) {
+    var note = createRecycledObject(viewObj, "prosessit-note", "diagram-model-note", reunusx, juoksevay, noteleveys, notekorkeus);
+    //console.log(note);
+    note.setText("Tehtäväluokkaan " + element.name + " liittyvät prosessit:");
+    juoksevay += notekorkeus + kuviovaliy;
+  }
+
+  var rivillakpl = Math.min(kuvioitamaxrivi, prosessit.size());
+  var nykyx = 1;
+  prosessit.each(function (elem) {
+    recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+    nykyx++;
+    if (nykyx > rivillakpl) {
+      nykyx = 1;
+      juoksevay += kuvionkorkeus + kuviovaliy;
+    }
+  });
+  if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  juoksevay += Math.round((kuvionkorkeus + kuviovaliy) / 2);
+
+  //console.log("Viimeistellään...");
+  recycledViewFinishRecycling(viewObj);
+  varitaNakyma(nakyma);
+
+  console.log("... luotu.");
+
+}
+

@@ -1,0 +1,81 @@
+﻿/*
+ * Luo 360-näkymän Espoon tiedonhallintamalliin valituille prosesseille. Kutsutaan ~lib/LuoNäkymäProsessille.ajs:n funktiota.
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäProsessille.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTietovarannolle.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTietojärjestelmälle.ajs");
+load(__SCRIPTS_DIR__ + "~lib/LuoNäkymäTehtäväluokalle.ajs");
+
+var aloitus = new Date();
+console.show();
+console.log(">>> Aloitetaan näkymien luominen... " + aloitus.format("isoDateTime"));
+
+var valinta = $("empty");
+$(selection).each(function(element) {  // explode relevant folder contents
+  if (element.type == "folder") {
+    if ($("#"+element.id).parents().filter(function (fol) { return fol.name == "Views"; }).size() > 0) {
+      valinta.add($("#"+element.id).find("view"));
+    } else {
+      valinta.add($("#"+element.id).find("business-process").filter(fth));  // prosessit
+      valinta.add($("#" + element.id).find("product").filter(fthHaving({ "_Tietovaranto": "1" }))); // tietovarannot
+      valinta.add($("#" + element.id).find("application-component").filter(fth));
+      valinta.add($("#" + element.id).find("business-function").filter(fth));
+    }
+  } else {
+    valinta.add($("#"+element.id));
+  }
+});
+
+console.log("> Valittuna " + valinta.size() + " kohde(tta).");
+if (valinta.size() > 10) {
+  if (!window.confirm("Olet valinnut " + valinta.size() + " kohdetta, joille luodaan näkymät. Haluatko jatkaa?")) {
+    console.log("> Keskeytetty");
+    exit();
+  }
+}
+
+valinta.each(function(element) {
+  element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+
+  if (element.type == 'archimate-diagram-model' && element.prop("_KuvattavaKohde")) {
+    // jos valittuna on kaavio, joka kuvaa tiettyä elementtiä, oletetaan käyttäjän tarkoittavan että haluaa luoda näkymän ko. elementille (eli luoda uudelleen ko. kaavion)
+    element = $("#"+element.prop("_KuvattavaKohde")).first();
+  }
+
+  if (!fth(element)) {
+    console.log("Ei kuulu tiedonhallintamalliin: " + element);
+    return;
+  }
+
+  /* tätä voi käyttää, jos ajo keskeytyi virheeseen... päivittämään vain tiettyä hetkeä aiemmin luodut
+  if (element.prop("_OmaNäkymä")) {
+    var omaNakyma = $("#" + element.prop("_OmaNäkymä")).first();
+    if (omaNakyma) {
+      if (omaNakyma.prop("_KuvattavaKohde") == element.id) {
+        if (omaNakyma.prop("_Luotu") >= "2021-11-02T14:03:52") {
+          console.log("- Skipataan " + element);
+          return;
+        }
+      }
+    }
+  }
+  */
+
+  if (element.type == 'business-process') luoNakymaProsessille(element);
+  else if (element.type == 'product' && element.prop("_Tietovaranto") == "1") luoNakymaTietovarannolle(element);
+  else if (element.type == 'application-component') luoNakymaTietojarjestelmalle(element);
+  else if (element.type == 'business-function') luoNakymaTehtavaluokalle(element);
+  else console.log("Ohitetaan tuntematon elementti: " + element);
+
+});
+
+var lopetus = new Date();
+var kestosek = Math.floor((lopetus - aloitus) / 1000);
+
+console.log("> Valmis (kesto " + Math.floor(kestosek / 60) + " min " + (kestosek % 60) + " s)");
+console.log("<<<");
+console.log("");

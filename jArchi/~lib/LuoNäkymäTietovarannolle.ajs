@@ -1,0 +1,121 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+
+function luoNakymaTietovarannolle(element) {
+
+  var views = $("folder.Views").first();
+  var tiedonhallintamalliFolder = $("#" + views.id).children("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalliFolder == null) {
+    tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
+  }
+  var tietovarannotFolder = $("#" + tiedonhallintamalliFolder.id).children("folder.Tietovarannot").first();
+  if (tietovarannotFolder == null) {
+    tietovarannotFolder = tiedonhallintamalliFolder.createFolder("Tietovarannot");
+  }
+
+  console.log("Luodaan näkymää tietovarannolle " + element.name + "...");
+
+  var folder = tietovarannotFolder;
+  var omistaja = $("#" + element.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").first();
+  if (omistaja) {
+    var toimiala = omistaja.prop("Toimiala");
+    if (!toimiala) toimiala = "Muut";
+    if (omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") toimiala = "Ulkoiset";
+    var toimialaFolder = $("#" + tietovarannotFolder.id).children("folder." + toimiala).first();
+    if (toimialaFolder == null) {
+      toimialaFolder = tietovarannotFolder.createFolder(toimiala);
+    }
+    folder = toimialaFolder;
+  }
+
+  var onjo = $("view").filter(function (view) { return view.prop("_KuvattavaKohde") == element.id; });
+  onjo = onjo.add($("#" + folder.id).children("view." + element.name).not(onjo));
+  /*var korvaa = true;
+  if (onjo.size() > 0) {
+    if (!korvaakaikki) {
+      var korvaa = window.confirm("Tietovarannolla " + element.name + " on jo näkym(i)ä. Korvataanko? (Muutoin tehdään uusi rinnalle)");
+      if (korvaa && valinta.size() > 1) {
+        resp2 = window.confirm("Korvataanko kaikki loput? Muutoin kysytään yksitellen.");
+        if (resp2) korvaakaikki = 1;
+      }
+    }
+  }*/
+
+  var viewObj = createOrRecycleArchimateView(onjo, element.name, folder, true);
+  var nakyma = viewObj.view;
+  nakyma.prop("_KuvattavaKohde", element.id);
+  nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+  nakyma.prop("_Tiedonhallintamalli", "1");
+  nakyma.documentation = element.documentation;
+  element.prop("_OmaNäkymä", nakyma.id);
+  var juoksevay = reunusy;
+
+  // lisätään käsillä oleva tietovaranto keskelle
+  var varantoObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), juoksevay, kuvionleveys, kuvionkorkeus);
+
+  juoksevay += 2 * kuvionkorkeus + kuviovaliy;
+
+  var jarjestelmat = $("#" + element.id).inRels("serving-relationship").sourceEnds("application-component").filter(fth);
+  jarjestelmat.sort(namecompare);
+  if (jarjestelmat.size() > 0) {
+    var rivillakpl = Math.min(kuvioitamaxrivi, jarjestelmat.size());
+    var nykyx = 1;
+    jarjestelmat.each(function (elem) {
+      recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+  juoksevay += 2 * kuviovaliy;
+
+  var prosessit = $("#" + element.id).outRels("serving-relationship").targetEnds("business-process").filter(fth);
+  prosessit.sort(tunnistecompare);
+  if (prosessit.size() > 0) {
+    var rivillakpl = Math.min(kuvioitamaxrivi, prosessit.size());
+    var nykyx = 1;
+    prosessit.each(function (elem) {
+      recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+  juoksevay += 2 * kuviovaliy;
+
+  var tehtluokat = $("#" + element.id).outRels("serving-relationship").targetEnds("business-function").filter(fth);
+  tehtluokat.sort(namecompare);
+  if (tehtluokat.size() > 0) {
+    var rivillakpl = Math.min(kuvioitamaxrivi, tehtluokat.size());
+    var nykyx = 1;
+    tehtluokat.each(function (elem) {
+      recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+  juoksevay += 2 * kuviovaliy;
+
+  recycledViewFinishRecycling(viewObj);
+  varitaNakyma(nakyma);
+
+  console.log("... luotu.");
+
+}
