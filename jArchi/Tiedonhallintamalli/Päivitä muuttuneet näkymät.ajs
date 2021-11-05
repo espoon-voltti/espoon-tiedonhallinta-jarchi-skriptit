@@ -66,7 +66,7 @@ function propagoiYlos(elemmap, elemid) {
   }
   var ylaelemid = elemmap[elemid].ylaelemid;
   if (ylaelemid) {
-    if (elemmap[ylaelemid].muuttunut < elemmap[elemid].muuttunut) {
+    if (null2e(elemmap[ylaelemid].muuttunut) < null2e(elemmap[elemid].muuttunut)) {
       elemmap[ylaelemid].muuttunut = elemmap[elemid].muuttunut;
       propagoiYlos(elemmap, ylaelemid);
     }
