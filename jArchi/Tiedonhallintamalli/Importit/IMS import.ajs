@@ -32,7 +32,7 @@ var imskentat = {
   "Prosessi saa syötteitä *": "Saa syötteitä",
   "Prosessi tuottaa syötteitä *": "Tuottaa syötteitä",
   "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto",
-  "Koskee asianhallintaa *": "_Koskee asianhallintaa IMS"
+  "Koskee asianhallintaa *": "_Koskee asianhallintaa IMS"  // käsitellään MYÖS erikseen
 };
 
 function siisti(arvo) {
@@ -43,7 +43,7 @@ function siisti(arvo) {
 var HERJA_KONSOLIINFO = 1;
 var HERJA_KONSOLIVIRHE = 2;
 var HERJA_VAROITUSIKKUNA = 3;
-var HERJA_OHITETAANKOIKKUNA = 4;
+var HERJA_KASITELLAANKOIKKUNA = 4;
 
 function herjaa(huomioLista, lajiteksti, yksilointi, imsId, tunniste, imsNimi, archiPros, kasittely) {
   if (kasittely === undefined) kasittely = HERJA_KONSOLIVIRHE;
@@ -61,9 +61,9 @@ function herjaa(huomioLista, lajiteksti, yksilointi, imsId, tunniste, imsNimi, a
       console.error(herja);
       window.alert(herja);
       break;
-    case HERJA_OHITETAANKOIKKUNA:
-      var result = window.confirm(herja + "; Ohitetaanko?");
-      var resultText = result ? " (Ohitetaan)" : " (Käsitellään silti)";
+    case HERJA_KASITELLAANKOIKKUNA:
+      var result = window.confirm(herja + "; Käsitelläänkö?");
+      var resultText = result ? " (Käsitellään silti)" : " (Ohitetaan)";
       console.error(herja + resultText);
       huomiorivi["Yksilöinti"] += resultText;
       return result;
@@ -199,8 +199,8 @@ for (var i = 0; i < csvData.length; i++) {
   } else if (!tunniste) {
     continue;  // ei ilmeisesti kuulu tiedonhallintamalliin, mennään eteenpäin
   } else if (!tunnistePattern.exec(tunniste) || tunniste != tunnisteNimessa) {
-    var ohitetaan = herjaa(huomioLista, "** Prosessin tunniste ei ole oikean muotoinen tai tunniste ei vastaa nimeä", tunniste, imsId, tunniste, nimi, nykyPros, HERJA_OHITETAANKOIKKUNA);
-    if (ohitetaan) continue;
+    var kasitellaan = herjaa(huomioLista, "** Prosessin tunniste ei ole oikean muotoinen tai tunniste ei vastaa nimeä", tunniste, imsId, tunniste, nimi, nykyPros, HERJA_KASITELLAANKOIKKUNA);
+    if (!kasitellaan) continue;
     nimi = "(" + tunniste + "/VIRHEELLINEN) " + nimi;
     prosRivi["Nimi"] = nimi;
   }
@@ -238,7 +238,7 @@ console.log("> Rivit käsitelty ensimmäisen kerran");
 
 var ajankohta = new Date();
 var aikaleima = ajankohta.format("isoDateTime");
-var muuttuneetPros = {};
+//var muuttuneetPros = {};
 
 for (var i = 0; i < valitutRivit.length; i++) {
   var prosRivi = valitutRivit[i];
@@ -260,7 +260,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     nykyPros.prop("_TunnistePäivitetty", aikaleima);
     nykyPros.prop("_NimiPäivitetty", aikaleima);
     muuttunutMerkinta(nykyPros, null, aikaleima);
-    muuttuneetPros[nykyPros.id] = "1";
+    //muuttuneetPros[nykyPros.id] = "1";
     kaikkiProsImsIdMap[imsId] = nykyPros;
     nykyProsMap[imsId] = nykyPros;
     console.log("+ Lisätty uusi prosessi " + nykyPros);
@@ -331,6 +331,17 @@ for (var i = 0; i < valitutRivit.length; i++) {
       }
     }
   }
+  var asianhallinta = null2e(prosRivi["Koskee asianhallintaa *"]).trim();  // käsitellään MYÖS erikseen
+  if (asianhallinta) {
+    var uusiah = "Ei";
+    if (asianhallinta.toLowerCase().startsWith("k")) uusiah = "Kyllä";
+    if (uusiah != nykyPros.prop("Koskee asianhallintaa")) {
+      vanha["Koskee asianhallintaa"] = nykyPros.prop("Koskee asianhallintaa");
+      muutos["Koskee asianhallintaa"] = uusiah;
+      nykyPros.prop("Koskee asianhallintaa", uusiah);
+    }
+  }
+
 
   var nykyOmistajaRel = $("#"+nykyPros.id).inRels("association-relationship.vastaa").first();
   var nykyOmistaja = null;
@@ -460,7 +471,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     muutoksia++;
   }
   if (muutoksia) {
-    muuttuneetPros[nykyPros.id] = "1";
+    //muuttuneetPros[nykyPros.id] = "1";
     nykyPros.prop("_Päivitetty", aikaleima);
     console.log("* Prosessin " + nykyPros.name + " tietoja muuttunut:");
     for (var muuttunut in muutos) {
@@ -478,9 +489,10 @@ $("business-process").filter(fth).each(function (pros) {
     var kohdeMap = syoteLahdeMap[pros.id];
     $("#" + pros.id).outRels("flow-relationship").each(function (rel) {
       if (kohdeMap[rel.target.id]) {
-        // SEURAAVAT 2 RIVIÄ VOINEE POISTAA SITTEN KUN PÄIVITETTY KERRAN?
         var tiedot = kohdeMap[rel.target.id];
         rel.name = (tiedot.lahteelta ? "." : "") + "syöte" + (tiedot.kohteelta ? "." : "");
+        if (tiedot.lahteelta) rel.prop("_Lähteeltä", "1"); else rel.removeProp("_Lähteeltä");
+        if (tiedot.kohteelta) rel.prop("_Kohteelta", "1"); else rel.removeProp("_Kohteelta");
         delete kohdeMap[rel.target.id];
       } else {
         console.log("Prosessi " + rel.target.name + " ei saa enää syötettä prosessilta " + rel.source.name + ", poistetaan relaatio.");
@@ -491,10 +503,12 @@ $("business-process").filter(fth).each(function (pros) {
     for (var puuttuvaId in kohdeMap) {
       var tiedot = kohdeMap[puuttuvaId];
       console.log("Lisätään uusi syöterelaatio prosessista " + pros.name + " prosessiin " + tiedot.kohdePros.name);
-      model.createRelationship("flow-relationship",
+      var rel = model.createRelationship("flow-relationship",
         (tiedot.lahteelta ? "." : "") + "syöte" + (tiedot.kohteelta ? "." : ""),
         pros,
         tiedot.kohdePros);
+      if (tiedot.lahteelta) rel.prop("_Lähteeltä", "1"); else rel.removeProp("_Lähteeltä");
+      if (tiedot.kohteelta) rel.prop("_Kohteelta", "1"); else rel.removeProp("_Kohteelta");
       muuttunutMerkinta(pros, tiedot.kohdePros, aikaleima);
     }
   } else {  // prosessilta ei lähde enää ollenkaan syötteitä, poistetaan mahdolliset olemassa olevat lähetävät
@@ -545,7 +559,7 @@ if (huomioLista.length > 0) {
   }
 }
 
-var selection = $("empty");
+/* var selection = $("empty");
 for (var prosid in muuttuneetPros) {
   selection.add($("#"+prosid));
 }
@@ -553,7 +567,7 @@ if (selection.size() > 0) {
   if (window.confirm("Päivitetäänkö muuttuneiden prosessien näkymät (" + selection.size() + " kpl)?")) {
     var korvaakaikki = 1;
     load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo näkymä prosessille.ajs");
-    // TODO miten yläprosessien ja aliprosessien näkymät, pitääkö ne myös päivittää?
+    // TODO miten yläprosessien ja aliprosessien näkymät, pitääkö ne myös päivittää? --> ratkaistu toisaalla!
   }
-}
+}*/
 console.log("> Valmis");
