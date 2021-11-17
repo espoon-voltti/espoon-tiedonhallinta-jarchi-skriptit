@@ -378,7 +378,8 @@ frame(element, map, isviewfor) ::= <<
 			   <a class="glyphicon glyphicon-info-sign" id="hint-^element.Class.SimpleName^" target="hint"></a>
 			^endif^
 -->
-			^if(isviewfor)^^salkkulinkit(isviewfor)^<span class="pull-right"><a href="../..?view=^element.Id^&name=^element.Name;format="url-encode"^" target="_top">Linkki t&auml;nne</a></span>^else^^salkkulinkit(element)^^endif^
+			^if(isviewfor)^^salkkulinkit(isviewfor)^^else^^salkkulinkit(element)^^endif^
+			^if(element.Children && !element.Bounds)^<span class="pull-right"><a href="../..?view=^element.Id^&name=^element.Name;format="url-encode"^" target="_top">Linkki t&auml;nne</a></span>^endif^
 		</div>
 		
 		<div class="panel-body root-panel-body">
