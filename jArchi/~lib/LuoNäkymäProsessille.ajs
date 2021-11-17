@@ -39,6 +39,7 @@ function luoNakymaProsessille(element) {
 
   function lisaaAliprosessit(pros, kohdepros, map) {
     $("#" + pros.id).inRels("specialization-relationship").sourceEnds("business-process").filter(fth).each(function (alipros) {
+      if (alipros.prop("_ÄläNostaYhteyksiäYlös")) return;
       if (!map[alipros.id]) { // tämän pitäisi estää ikisilmukat?
         map[alipros.id] = kohdepros.id;
         lisaaAliprosessit(alipros, kohdepros, map);
@@ -49,6 +50,7 @@ function luoNakymaProsessille(element) {
   function luoAliprosessiMap(prosessi) {
     var map = {};
     $("#" + prosessi.id).inRels("specialization-relationship").sourceEnds("business-process").filter(fth).each(function (pros) {
+      if (pros.prop("_ÄläNostaYhteyksiäYlös")) return;
       map[pros.id] = pros.id;
       lisaaAliprosessit(pros, pros, map);
     });
@@ -89,9 +91,13 @@ function luoNakymaProsessille(element) {
     juoksevay += kuvionkorkeus + kuviovaliy;
   }
 
-  var saasyotteita = $("#" + element.id).inRels("flow-relationship").sourceEnds("business-process").filter(fth);
+  var syoteLahdeRels = $("#" + element.id).inRels("flow-relationship");
+  if (element.prop("_NäytäVainOmatSyötteet")) syoteLahdeRels = syoteLahdeRels.filter(function (rel) { return rel.prop("_Kohteelta"); });
+  var saasyotteita = syoteLahdeRels.sourceEnds("business-process").filter(fth);
   saasyotteita.sort(tunnistecompare);
-  var tuottaasyotteita = $("#" + element.id).outRels("flow-relationship").targetEnds("business-process").filter(fth);
+  var syoteKohdeRels = $("#" + element.id).outRels("flow-relationship");
+  if (element.prop("_NäytäVainOmatSyötteet")) syoteKohdeRels = syoteKohdeRels.filter(function (rel) { return rel.prop("_Lähteeltä"); });
+  var tuottaasyotteita = syoteKohdeRels.targetEnds("business-process").filter(fth);
   tuottaasyotteita.sort(tunnistecompare);
   saasyotteita = saasyotteita.not(tuottaasyotteita);
   var syotenum = Math.max(saasyotteita.size(), tuottaasyotteita.size());
