@@ -67,7 +67,7 @@ function luoVapaatekstiJarjestelma(jarjnimi) {
   jarj.prop("_Päivitetty", aikaleima);
   muuttunutMerkinta(jarj, null, aikaleima);
   jarjNimiMap[jarjnimi] = jarj;
-  muuttuneetJarj[jarj.id] = "1";
+  //muuttuneetJarj[jarj.id] = "1";
   return jarj;
 }
 
@@ -99,7 +99,7 @@ $("flow-relationship").filter(fth).each(function (rel) {
   }
 });
 
-var muuttuneetJarj = {};
+//var muuttuneetJarj = {};
 
 var applicationFolder = $("folder.Application").first();
 var tiedonhallintamalliFolder = $("#"+applicationFolder.id).find("folder.Tiedonhallintamalli").first();
@@ -181,7 +181,7 @@ if (filePath) {
         nykyJarj.prop("Järjestelmäsalkku-linkki", salkkuUrl.replace("[SALKKUID]", salkkuId));
         nykyJarj.prop("_Päivitetty", aikaleima);
         muuttunutMerkinta(nykyJarj, null, aikaleima);
-        muuttuneetJarj[nykyJarj.id] = "1";
+        //muuttuneetJarj[nykyJarj.id] = "1";
 	console.log("+ Lisätty uusi järjestelmä " + nykyJarj.name);
       }
       var uusiNimi = jarjRivi["Järjestelmänimi"];
@@ -348,8 +348,8 @@ if (filePath) {
             console.log("+ Lisätään luku-liittymä järjestelmästä " + nykyRel.source.name + " järjestelmään " + nykyRel.target.name + ", tiedot " + nykyRel.name);
             nykyRel.prop("_Tiedonhallintamalli", "1");
             nykyRel.prop("_Päivitetty", aikaleima);
-            muuttuneetJarj[nykyJarj.id] = "1";
-            muuttuneetJarj[toinenJarj.id] = "1";
+            //muuttuneetJarj[nykyJarj.id] = "1";
+            //muuttuneetJarj[toinenJarj.id] = "1";
           }
           if (nykyRel) {
             rels.push(nykyRel);
@@ -372,8 +372,8 @@ if (filePath) {
             console.log("+ Lisätään kirjoitus-liittymä järjestelmästä " + nykyRel.source.name + " järjestelmään " + nykyRel.target.name + ", tiedot " + nykyRel.name);
             nykyRel.prop("_Tiedonhallintamalli", "1");
             nykyRel.prop("_Päivitetty", aikaleima);
-            muuttuneetJarj[nykyJarj.id] = "1";
-            muuttuneetJarj[toinenJarj.id] = "1";
+            //muuttuneetJarj[nykyJarj.id] = "1";
+            //muuttuneetJarj[toinenJarj.id] = "1";
           }
           if (nykyRel) {
             rels.push(nykyRel);
@@ -466,8 +466,8 @@ if (filePath) {
           poistaminen = window.confirm("Poistetaanko poistuneet relaatiot kokonaan? Muuten vain merkitään poistuneiksi.") ? 1 : 2;
         } */
         var vanhaRel = nykyRelList[relId];
-        muuttuneetJarj[vanhaRel.source.id] = "1";
-        muuttuneetJarj[vanhaRel.target.id] = "1";
+        //muuttuneetJarj[vanhaRel.source.id] = "1";
+        //muuttuneetJarj[vanhaRel.target.id] = "1";
         muuttunutMerkinta(vanhaRel.source, vanhaRel.target, aikaleima);
         // if (poistaminen == 1) {
           console.log("  - POISTETTIIN relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
@@ -495,7 +495,7 @@ if (filePath) {
     model.prop("Päivitetty Järjestelmäsalkusta", aikaleima);
     console.log("> Parsing Complete")
 
-    var selection = $("empty");
+    /* var selection = $("empty");
     for (var jarjid in muuttuneetJarj) {
       selection.add($("#"+jarjid));
     }
@@ -504,7 +504,8 @@ if (filePath) {
         var korvaakaikki = 1;
         load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo näkymä tietojärjestelmälle.ajs");
       }
-    }
+    }*/
+
     console.log("> Valmis");
 }
 else {
