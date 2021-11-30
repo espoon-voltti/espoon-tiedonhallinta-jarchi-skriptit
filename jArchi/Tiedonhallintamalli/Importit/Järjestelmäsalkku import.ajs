@@ -326,7 +326,15 @@ if (filePath) {
         var kirjoitus = !ltyyppi || ltyyppi == "Vain kirjoitus" || ltyyppi == "Luku ja kirjoitus";
 
         var nykyJarj = jarjNimiMap[liitRivi["Järjestelmä"]];
+        if (!nykyJarj) {
+          console.error("Liittymälle merkittyä järjestelmää (Järjestelmä) ei löydy: " + liitRivi["Järjestelmä"]);
+          continue;
+        }
         var toinenJarj = jarjNimiMap[liitRivi["Järj/ muu liittymä"]];
+        if (!toinenJarj) {
+          console.error("Liittymälle merkittyä järjestelmää (Järj/ muu liittymä) ei löydy: " + liitRivi["Järj/ muu liittymä"]);
+          continue;
+        }
         var paatiedot = liitRivi["Siirrettävät\npäätiedot"]
         var rels = [];
 
