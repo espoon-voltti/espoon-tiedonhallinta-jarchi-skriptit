@@ -1,0 +1,75 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+console.clear();
+
+console.log("> Muuttuneiden prosessien listaus");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function propfunc(name) {
+  return this[name];
+}
+
+function uusincompare(left, right) {
+  if (left["Uusin muutos"] < right["Uusin muutos"]) return 1;
+  if (left["Uusin muutos"] > right["Uusin muutos"]) return -1;
+  left.prop = propfunc;   // pieni hackki tähän, kun käytössä on tavallinen javascript objekti eikä Archin elementti
+  right.prop = propfunc;
+  return tunnistecompare(left, right);
+}
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "muuttuneet_prosessit.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+var csvData = [];
+var maxTaso = 0;
+
+$("business-process").filter(fth).each(function (pros) {
+  var datarow = {};
+  var tunnistePaiv = datarow["Tunniste päivitetty"] = pros.prop("_TunnistePäivitetty");
+  var nimiPaiv = datarow["Nimi päivitetty"] = pros.prop("_NimiPäivitetty");
+  var poistunut = datarow["Poistuneeksi merkitty"] = pros.prop("_Poistuneeksi merkitty");
+  var uusinmuutos = tunnistePaiv;
+  if (nimiPaiv > uusinmuutos) uusinmuutos = nimiPaiv;
+  if (poistunut > uusinmuutos) uusinmuutos = poistunut;
+  if (!uusinmuutos) return;
+  datarow["Uusin muutos"] = uusinmuutos;
+  datarow["Tunniste"] = pros.prop("Tunniste");
+  datarow["Nimi"] = pros.name;
+  datarow["Omistaja"] = pros.prop("Omistaja");
+  datarow["Vanha tunniste"] = pros.prop("_VanhaTunniste");
+  if (poistunut) datarow["Vanha tunniste"] = "POISTUNUT" + (datarow["Vanha tunniste"] ? "; " + datarow["Vanha tunniste"] : "");
+  csvData.push(datarow);
+});
+
+csvData.sort(uusincompare);
+
+var csvHeaders = [];
+csvHeaders.push("Uusin muutos");
+csvHeaders.push("Tunniste");
+csvHeaders.push("Vanha tunniste");
+csvHeaders.push("Nimi");
+csvHeaders.push("Omistaja");
+csvHeaders.push("Tunniste päivitetty");
+csvHeaders.push("Nimi päivitetty");
+csvHeaders.push("Poistuneeksi merkitty");
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+console.log("> Valmis");
+console.log();
+
