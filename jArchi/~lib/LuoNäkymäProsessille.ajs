@@ -252,7 +252,7 @@ function luoNakymaProsessille(element) {
     });
   });
   //console.log("aliprosrels.length = " + aliprosrels.length);
-  if (aliprosrels.length <= maxaliprosessienyhteyksia) {
+  if (aliprosrels.length <= maxaliprosessienyhteyksia && !element.prop("_ÄläPiirräAliprosessienYhteyksiä")) {
     for (i = 0; i < aliprosrels.length; i++) {
       recycledViewAddRelationship(viewObj, aliprosrels[i]["rel"], aliprosrels[i]["src"], aliprosrels[i]["trg"]);
     }
