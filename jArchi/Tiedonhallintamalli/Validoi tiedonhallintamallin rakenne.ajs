@@ -48,6 +48,13 @@ var elementtivalidoinnit = {
       tarkistaYlatehtavaluokka
     ]
   },
+  "Tietosuojaseloste": {  // ylläpito Archissa rakenteisena tietona, varsinainen master on Espoo.fi sivustolla julkaistut selosteet - Archin tietojen päivitys manuaalista
+    tunnista: function (elem) { return elem.type == "representation" && fth(elem); },
+    tarkistukset: [
+      etsiDuplikaatit("tietosuojaseloste", function (elem) { return elem.name; }),
+      tarkistaElementinOmistaja
+    ]
+  },
   "Organisaatio": {  // YLLÄPITO ARCHISSA (lähteenä hallintosääntö ja toimintaohjeet)
     tunnista: function (elem) { return elem.type == "business-actor" && fth(elem); },
     tarkistukset: []
@@ -96,7 +103,7 @@ var relaatiovalidoinnit = {
   },
   "Tietojärjestelmien välinen liittymä": {  // ylläpito Järjestelmäsalkussa (pl. karkulaiset?)
     tunnista: function (rel) { return rel.type == "flow-relationship" && fth(rel) && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
-    tarkistukset: []  // ei voida käyttää relaatioduplikaatit-tarkistusta koska voi olla useampi eri tietovirta samojen järjestelmien välillä
+    tarkistukset:  [ ] // [etsiDuplikaatit("liittymän riippuvuus-id", function (rel) { return rel.prop("Riippuvuus-ID"); })]  // ei voida käyttää relaatioduplikaatit-tarkistusta koska voi olla useampi eri tietovirta samojen järjestelmien välillä
   },
   "Järjestelmäkokonaisuuteen kuuluva tietojärjestelmä": {  // ylläpito Järjestelmäsalkussa
     tunnista: function (rel) { return rel.type == "composition-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietojärjestelmä"; },
@@ -104,6 +111,10 @@ var relaatiovalidoinnit = {
   },
   "Tehtäväluokan alitehtäväluokka": {  // ylläpito TOJ:ssa
     tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Tehtäväluokka" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
+    tarkistukset: [relaatioduplikaatit]
+  },
+  "Tietosuojaselosteen tietovaranot": {  // YLLÄPITO ARCHISSA
+    tunnista: function (rel) { return rel.type == "association-relationship" && tunnistaElementti(rel.source) == "Tietosuojaseloste" && tunnistaElementti(rel.target) == "Tietovaranto"; },
     tarkistukset: [relaatioduplikaatit]
   },
   "Vapaatekstien metsästys": {  // YLLÄPITO TOISTAISEKSI ARCHISSA

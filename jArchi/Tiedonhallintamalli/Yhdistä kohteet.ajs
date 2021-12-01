@@ -13,6 +13,7 @@ console.log(">>> Aloitetaan kohteiden yhdistäminen... ");
 var prosessit = [];
 var tietovarannot = [];
 var tietojarjestelmat = [];
+var tietosuojaselosteet = [];
 
 var ajankohta = new Date();
 var aikaleima = ajankohta.format("isoDateTime");
@@ -45,11 +46,37 @@ $(selection).each(function (elem) {
     tietojarjestelmat.push(elem);
     return;
   }
+  if (elem.type == "representation") {
+    tietosuojaselosteet.push(elem);
+    return;
+  }
   console.error("Kohde ei ole prosessi, tietovaranto tai tietojärjestelmä: " + elem + ", ei voida jatkaa.");
   exit();
 });
 
 var laskuri = 0;
+
+if (tietosuojaselosteet.length) {
+  if (prosessit.length || tietojarjestelmat.length || !tietovarannot.length) {
+    console.error("Tietosuojaselosteita voi liittää vain tietovarantoihin, ei voida jatkaa");
+    exit();
+  }
+  for (var i = 0; i < tietosuojaselosteet.length; i++) {
+    for (var j = 0; j < tietovarannot.length; j++) {
+      var rels = $("#" + tietosuojaselosteet[i].id).rels("association-relationship").filter(function (rel) {
+        return rel.source.id == tietosuojaselosteet[i].id || rel.target.id == tietovarannot[j].id;
+      });
+      if (rels.size() > 0) {
+        console.error("- YHTEYS ON JO OLEMASSA: " + tietosuojaselosteet[i] + " / " + tietovarannot[j]);
+      } else {
+        console.log("- Luodaan yhteys tietosuojaselosteelta " + tietosuojaselosteet[i] + " tietovarantoon " + tietovarannot[j]);
+        model.createRelationship("association-relationship", "", tietosuojaselosteet[i], tietovarannot[j]);
+        muuttunutMerkinta(tietosuojaselosteet[i], tietovarannot[j], aikaleima);
+        laskuri++;
+      }
+    }
+  }
+}
 
 if (prosessit.length) {
   if (tietovarannot.length && tietojarjestelmat.length) {

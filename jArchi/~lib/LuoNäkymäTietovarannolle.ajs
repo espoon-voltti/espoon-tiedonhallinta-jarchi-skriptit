@@ -8,6 +8,8 @@ load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
 load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
+var tietosuojaselostekorkeus = Math.floor(1.5 * kuvionkorkeus);
+
 function luoNakymaTietovarannolle(element) {
 
   var views = $("folder.Views").first();
@@ -107,6 +109,23 @@ function luoNakymaTietovarannolle(element) {
       if (nykyx > rivillakpl) {
         nykyx = 1;
         juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+  }
+  juoksevay += 2 * kuviovaliy;
+
+  var selosteet = $("#" + element.id).inRels("association-relationship").sourceEnds("representation").filter(fth);
+  selosteet.sort(namecompare);
+  if (selosteet.size() > 0) {
+    var rivillakpl = Math.min(kuvioitamaxrivi, selosteet.size());
+    var nykyx = 1;
+    selosteet.each(function (elem) {
+      recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, tietosuojaselostekorkeus);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += tietosuojaselostekorkeus + kuviovaliy;
       }
     });
     if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;

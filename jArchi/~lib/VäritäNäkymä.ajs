@@ -23,6 +23,8 @@ function varitaNakyma(varitettavaNakyma) {
         viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
       else if (viewelem.type == "business-function")
         viewelem.setLabelExpression("${name}");
+      /* else if (viewelem.type == "representation")
+        viewelem.setLabelExpression("Tietosuojaseloste: ${name}\n\n[${property:Omistaja}]"); */
       else
         viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
       if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
@@ -90,6 +92,15 @@ function varitaNakyma(varitettavaNakyma) {
     else {
       obj.fillColor = "#eeeeee";
       if (onLapsia(obj)) obj.fontColor = "#0000cc";
+    }
+  });
+
+  // Tietosuojaselosteet
+
+  $("#" + varitettavaNakyma.id).children("representation").filter(fth).each(function (obj) {
+    if (!fth(obj)) obj.fillColor = null;
+    else {
+      obj.fillColor = "#cccc00";
     }
   });
 
