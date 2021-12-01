@@ -1,0 +1,116 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+console.clear();
+
+console.log("> Asiakirjajulkisuuskuvauksen generointi");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+var exportFile = window.promptSaveFile({ title: "Asiakirjajulkisuuskuvaus HTML", filterExtensions: [ "*.html" ], fileName: "asiakirjajulkisuuskuvaus.html" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Generoidaan HTML");
+
+var html = "<html><head><title>Asiakirjaulkisuuskuvaus</title></head>\n";
+html += "<body bgcolor =\"#ffffff\">\n";
+
+var toimialaMap = {};
+var varantoMap = {}
+
+var relaatiot = $("business-actor").filter(fth).outRels(".vastaa").filter(function (rel) {
+  var ratkaisu = rel.target.type == "product" && fthHaving({ "_Tietovaranto": "1" })(rel.target);
+  return ratkaisu;
+});
+relaatiot.sort(function (left, right) { var orgcmp = namecompare(left.source, right.source); return orgcmp ? orgcmp : namecompare(left.target, right.target); });
+relaatiot.each(function (rel) {
+  var org = rel.source;
+  var varanto = rel.target;
+  if (org.prop("Sisäinen/ulkoinen") == "ulkoinen") return;  // ohitetaan ulkoiset tietovarannot
+  var toimiala = "Muut";
+  var toimialaOrg;
+  var sortorder = 9900;
+  if (org.prop("Toimiala")) {
+    toimiala = org.prop("Toimiala");
+    toimialaOrg = toimialaOrganisaatio(toimiala);
+    sortorder = toimialaOrg.prop("_SortOrder");
+  }
+  if (!toimialaMap[toimiala]) {
+    toimialaMap[toimiala] = {};
+    toimialaMap[toimiala].varannot = [];
+    toimialaMap[toimiala].sortorder = sortorder;
+    toimialaMap[toimiala].name = toimialaOrg;
+  }
+  toimialaMap[toimiala].varannot.push(varanto);
+  varantoMap[varanto.id] = varanto;
+});
+
+var toimialalista = [];
+for (var toimiala in toimialaMap) toimialalista.push(toimiala);
+toimialalista.sort(function (left, right) {
+  if (parseInt(toimialaMap[left].sortorder) > parseInt(toimialaMap[right].sortorder)) return 1;
+  if (parseInt(toimialaMap[left].sortorder) < parseInt(toimialaMap[right].sortorder)) return -1;
+  return 0;
+});
+
+for (var h = 0; h < toimialalista.length; h++) {
+  var toimiala = toimialalista[h];
+  var varannot = toimialaMap[toimiala].varannot;
+  varannot.sort();
+  var toimialanimi = toimialanNimi(toimiala) ? toimialanNimi(toimiala) : toimiala;
+  html += "<h1>" + toimialanimi + "</h1>\n";
+
+  for (var i = 0; i < varannot.length; i++) {
+    html += "<h2>" + varannot[i].name + "</h2>\n";
+    html += "<p>" + varannot[i].documentation + "</p>\n";
+    var selosteet = $("#" + varannot[i].id).inRels("association-relationship").sourceEnds("representation").filter(fth);
+    selosteet.sort(namecompare);
+    if (selosteet.size() > 0) {
+      html += "<h3>Tietosuojaselosteet</h3>\n<ul>\n";
+      selosteet.each(function (elem) {
+        html += "<li>" + elem.name;
+        if (elem.prop("Linkki-fi")) html += "&nbsp;<a href=\"" + elem.prop("Linkki-fi") + "\">FI</a>";
+        if (elem.prop("Linkki-se")) html += "&nbsp;<a href=\"" + elem.prop("Linkki-se") + "\">SE</a>";
+        if (elem.prop("Linkki-en")) html += "&nbsp;<a href=\"" + elem.prop("Linkki-en") + "\">EN</a>";
+        html += "</li>\n";
+      });
+      html += "</ul>\n";
+    }
+
+    var jarjestelmat = $("#" + varannot[i].id).inRels("serving-relationship").sourceEnds("application-component").filter(fth);
+    jarjestelmat.sort(namecompare);
+    if (jarjestelmat.size() > 0) {
+      html += "<h3>Tietojärjestelmät</h3>\n";
+      jarjestelmat.each(function (elem) {
+        var jarjnimi = elem.prop("Julkinen nimi");
+        if (!jarjnimi) jarjnimi = "[[ " + elem.name + " ]]";
+        html += "<h4>" + jarjnimi + "</h4>\n<dl>\n";
+        if (elem.prop("Tietoaineistot")) html += "<dt>Tietoaineistot</dt><dd>" + elem.prop("Tietoaineistot") + "</dd>\n";
+        if (elem.prop("Hakutekijät")) html += "<dt>Hakutekijät</dt><dd>" + elem.prop("Hakutekijät") + "</dd>\n";
+        if (elem.prop("Tietojen saatavuus avoimella rajapinnalla")) html += "<dt>Tietojen saatavuus avoimella rajapinnalla</dt><dd><a href=\"" + elem.prop("Tietojen saatavuus avoimella rajapinnalla") + "\">" + elem.prop("Tietojen saatavuus avoimella rajapinnalla") + "</a></dd>\n";
+        if (elem.prop("Asiarekisteri")) html += "<dt>Asiarekisteri</dt><dd>" + elem.prop("Asiarekisteri") + "</dd>\n";
+        html += "</dl>\n";
+      });
+    }
+
+  }
+
+}
+
+html += "</body></html>\n";
+
+console.log("> Tallennetaan HTML");
+
+$.fs.writeFile(exportFile, html);
+
+console.log("> Valmis");
+console.log();
+
