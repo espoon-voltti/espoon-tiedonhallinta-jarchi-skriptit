@@ -52,8 +52,16 @@ var jarjSalkkuMap = {};
 var jarjestelmat = $("application-component").filter(fth);
 jarjestelmat.sort(namecompare);
 jarjestelmat.each(function (jarj) {
-  jarj.prop("_Prosesseja", $("#"+jarj.id).outRels("serving-relationship").targetEnds("business-process").filter(fth).size());
-  jarj.prop("_Liittymiä", $("#"+jarj.id).rels("flow-relationship").filter(fth).targetEnds("application-component").size()); 
+  var jarjcoll = $("#" + jarj.id);
+  jarj.prop("_Prosesseja", jarjcoll.outRels("serving-relationship").targetEnds("business-process").filter(fth).size());
+  jarj.prop("_Liittymiä", jarjcoll.rels("flow-relationship").filter(fth).targetEnds("application-component").size());
+  if (jarjcoll.outRels("composition-relationship").targetEnds("application-component").filter(fth).size() > 0) { //filter(fth).filter(function (j) { return true; /*j.id != jarj.id; */}).size() > 0) {
+    //console.log("Pääjärjestelmä " + jarj);
+    jarj.prop("_PääAliJärj", "P");
+  } else if (jarjcoll.inRels("composition-relationship").sourceEnds("application-component").filter(fth).size() > 0) { //.filter(fth).filter(function (j) { return true; /*j.id != jarj.id;*/ }).size() > 0) {
+    //console.log("Osajärjestelmä " + jarj);
+    jarj.prop("_PääAliJärj", "A");
+  } else jarj.removeProp("_PääAliJärj");
   if (jarj.prop("Järjestelmäsalkku ID")) {  // tarkistetaan mahdolliset salkku-duplikaatit samalla...
     if (jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")]) {
       var herja = "Löytyi useita järjestelmiä samalla Järjestelmäsalkku ID:llä, mm. " + jarjSalkkuMap[jarj.prop("Järjestelmäsalkku ID")].name + " ja " + jarj.name + ". Tämä olisi syytä korjata manuaalisesti.";

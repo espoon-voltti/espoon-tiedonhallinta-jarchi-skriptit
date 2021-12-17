@@ -15,21 +15,25 @@ function varitaNakyma(varitettavaNakyma) {
   }
 
   var lisuke = "${property:Infotieto}";
-  if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prosesseja} pros., ${property:_Liittymiä} liitt.)\n"
+  if (varitettavaNakyma.prop("_Järjestelmäkartta")) lisuke = "(${property:_Prosesseja} pros., ${property:_Liittymiä} liitt.)\n";
 
-  $("#" + varitettavaNakyma.id).children("element").each(function (viewelem) {
-    if (fth(viewelem)) {
-      if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0)
-        viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
-      else if (viewelem.type == "business-function")
-        viewelem.setLabelExpression("${name}");
-      /* else if (viewelem.type == "representation")
-        viewelem.setLabelExpression("Tietosuojaseloste: ${name}\n\n[${property:Omistaja}]"); */
-      else
-        viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
-      if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
-        viewelem.fontStyle = "bold";
+  $("#" + varitettavaNakyma.id).children("element").filter(fth).each(function (viewelem) {
+    if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0) {
+      var lisalisuke = "";
+      if (varitettavaNakyma.prop("_Järjestelmäkartta")) {
+        if (viewelem.concept.prop("_PääAliJärj") == "P") lisalisuke = "↑ ";
+        else if (viewelem.concept.prop("_PääAliJärj") == "A") lisalisuke = "↓ ";
       }
+      viewelem.setLabelExpression("${name}\n" + lisalisuke + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
+    } else if (viewelem.type == "business-function")
+      viewelem.setLabelExpression("${name}");
+    /* else if (viewelem.type == "representation")
+      viewelem.setLabelExpression("Tietosuojaseloste: ${name}\n\n[${property:Omistaja}]"); */
+    else {
+      viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
+    }
+    if (viewelem.concept && viewelem.concept.id == varitettavaNakyma.prop("_KuvattavaKohde")) {
+      viewelem.fontStyle = "bold";
     }
   });
 
