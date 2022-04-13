@@ -1,0 +1,69 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+console.clear();
+
+console.log("> Muuttuneiden järjestelmien listaus");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function propfunc(name) {
+  return this[name];
+}
+
+function uusincompare(left, right) {
+  if (left["Uusin muutos"] < right["Uusin muutos"]) return 1;
+  if (left["Uusin muutos"] > right["Uusin muutos"]) return -1;
+  left.prop = propfunc;   // pieni hackki tähän, kun käytössä on tavallinen javascript objekti eikä Archin elementti
+  right.prop = propfunc;
+  return namecompare(left, right);
+}
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "muuttuneet_jarjestelmat.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+var csvData = [];
+var maxTaso = 0;
+
+$("application-component").filter(fth).each(function (jarj) {
+  var datarow = {};
+  var nimiPaiv = datarow["Nimi päivitetty"] = jarj.prop("_NimiPäivitetty");
+  var poistunut = datarow["Poistuneeksi merkitty"] = jarj.prop("_Poistuneeksi merkitty");
+  var uusinmuutos = nimiPaiv;
+  if (poistunut > uusinmuutos) uusinmuutos = poistunut;
+  if (!uusinmuutos) return;
+  datarow["Uusin muutos"] = uusinmuutos;
+  datarow["Nimi ja salkkuId"] = (poistunut ? "POISTUNUT " : "") + jarj.prop("_NimiSalkussa") + " (" + jarj.prop("Järjestelmäsalkku ID") + ")";
+  datarow["Omistaja"] = jarj.prop("Omistaja");
+  datarow["Vanha nimi"] = jarj.prop("_VanhaNimi");
+  csvData.push(datarow);
+});
+
+csvData.sort(uusincompare);
+
+var csvHeaders = [];
+csvHeaders.push("Uusin muutos");
+csvHeaders.push("Nimi ja salkkuId");
+csvHeaders.push("Omistaja");
+csvHeaders.push("Nimi päivitetty");
+csvHeaders.push("Poistuneeksi merkitty");
+csvHeaders.push("Vanha nimi");
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+console.log("> Valmis");
+console.log();
+

@@ -180,6 +180,7 @@ if (filePath) {
         nykyJarj.prop("Järjestelmäsalkku ID", salkkuId);
         nykyJarj.prop("Järjestelmäsalkku-linkki", salkkuUrl.replace("[SALKKUID]", salkkuId));
         nykyJarj.prop("_Päivitetty", aikaleima);
+        nykyJarj.prop("_NimiPäivitetty", aikaleima);
         muuttunutMerkinta(nykyJarj, null, aikaleima);
         //muuttuneetJarj[nykyJarj.id] = "1";
 	console.log("+ Lisätty uusi järjestelmä " + nykyJarj.name);
@@ -192,8 +193,13 @@ if (filePath) {
         muutos["Nimi"] = uusiNimi;
       }
       if (jarjRivi["Järjestelmänimi"] != nykyJarj.prop("_NimiSalkussa")) {
+        if (nykyJarj.prop("_NimiSalkussa")) {  // vanha nimi talteen vain jos sellainen oli
+          var vanhanimi = nykyJarj.prop("_VanhaNimi") ? nykyJarj.prop("_VanhaNimi") + "; " : "";
+          nykyJarj.prop("_VanhaNimi", vanhanimi + jarjRivi["Järjestelmänimi"]);
+        }
         nykyJarj.prop("_NimiSalkussa", jarjRivi["Järjestelmänimi"]);
         muutos["_NimiSalkussa"] = jarjRivi["Järjestelmänimi"];
+        nykyJarj.prop("_NimiPäivitetty", aikaleima);
       }
       if (jarjRivi["Kuvaus"] != nykyJarj.documentation) {
         nykyJarj.documentation = jarjRivi["Kuvaus"];
@@ -266,6 +272,7 @@ if (filePath) {
       poistunutJarj.prop("Järjestelmäsalkku ID", -poistunutId); // alussa laitettiin jarjMapiin vain ne joiden id > 0
       poistunutJarj.name = poistunutJarj.name + " (POISTUNUT JÄRJESTELMÄSALKUSTA)";
       poistunutJarj.prop("_Päivitetty", aikaleima);
+      poistunutJarj.prop("_Poistuneeksi merkitty", aikaleima);
       var kansio = $("#"+salkussaFolder.id).children("folder.Poistuneet").first();
       if (kansio == null) {
         kansio = salkussaFolder.createFolder("Poistuneet");
