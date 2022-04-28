@@ -342,7 +342,7 @@ if (filePath) {
           console.error("Liittymälle merkittyä järjestelmää (Järj/ muu liittymä) ei löydy: " + liitRivi["Järj/ muu liittymä"]);
           continue;
         }
-        var paatiedot = liitRivi["Siirrettävät\npäätiedot"]
+        var paatiedot = liitRivi["Siirrettävät\npäätiedot"].replace(/\n/g, ", ");
         var rels = [];
 
         if (vapaatekstiMap[liitRivi["Järj/ muu liittymä"]]) delete vapaatekstiMap[liitRivi["Järj/ muu liittymä"]];
