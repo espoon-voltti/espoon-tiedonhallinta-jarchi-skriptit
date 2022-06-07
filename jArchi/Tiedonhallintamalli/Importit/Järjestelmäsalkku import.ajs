@@ -195,7 +195,7 @@ if (filePath) {
       if (jarjRivi["Järjestelmänimi"] != nykyJarj.prop("_NimiSalkussa")) {
         if (nykyJarj.prop("_NimiSalkussa")) {  // vanha nimi talteen vain jos sellainen oli
           var vanhanimi = nykyJarj.prop("_VanhaNimi") ? nykyJarj.prop("_VanhaNimi") + "; " : "";
-          nykyJarj.prop("_VanhaNimi", vanhanimi + jarjRivi["Järjestelmänimi"]);
+          nykyJarj.prop("_VanhaNimi", vanhanimi + nykyJarj.name);
         }
         nykyJarj.prop("_NimiSalkussa", jarjRivi["Järjestelmänimi"]);
         muutos["_NimiSalkussa"] = jarjRivi["Järjestelmänimi"];
