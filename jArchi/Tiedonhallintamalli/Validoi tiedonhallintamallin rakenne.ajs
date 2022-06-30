@@ -113,7 +113,7 @@ var relaatiovalidoinnit = {
     tunnista: function (rel) { return rel.type == "specialization-relationship" && tunnistaElementti(rel.source) == "Tehtäväluokka" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
     tarkistukset: [relaatioduplikaatit]
   },
-  "Tietosuojaselosteen tietovaranot": {  // YLLÄPITO ARCHISSA
+  "Tietosuojaselosteen tietovarannot": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "association-relationship" && tunnistaElementti(rel.source) == "Tietosuojaseloste" && tunnistaElementti(rel.target) == "Tietovaranto"; },
     tarkistukset: [relaatioduplikaatit]
   },
