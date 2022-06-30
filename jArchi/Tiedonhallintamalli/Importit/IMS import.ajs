@@ -135,7 +135,7 @@ if (!filePath) {
   exit();
 }
 
-var csvFile =  new java.io.InputStreamReader(new java.io.FileInputStream(filePath), "UTF-8");
+var csvFile = new java.io.InputStreamReader(new java.io.FileInputStream(filePath), "ISO-8859-1"); // "UTF-8");
 console.log("> Encoding " + csvFile.getEncoding());
 
 var csvtext ="";
@@ -156,6 +156,10 @@ console.log("> File parsed");
 
 var csvData = parsedCsv.data;
 var csvMeta = parsedCsv.meta;
+/* console.log("> csvData.length = " + csvData.length);
+for (var i = 0; i < csvMeta.fields.length; i++) {
+  console.log("fields[" + i + "] = " + csvMeta.fields[i]);
+} */
 
 for (var kentta in imskentat) {
   if (csvMeta.fields.indexOf(kentta) < 0) {
@@ -169,10 +173,21 @@ for (var j = 0; j < csvMeta.fields.length; j++) {
   console.log("- " + j + ": " + csvMeta.fields[j]);
 } */
 
+for (var i = 0; i < csvData.length; i++) {
+  var prosRivi = csvData[i];
+  var imsId = prosRivi["Id"];
+  if (!imsId) {
+    console.log("Ohitettiin tyhjä rivi rivllä nro " + i);
+    continue;
+  }
+  prosRiviImsIdMap[imsId] = prosRivi;
+}
+console.log("> Rivit esikäsitelty");
+
 var valitutRivit = [];
 var nykyProsMap = {};
 
-for (var i = 0; i < csvData.length; i++) {
+prosriviloop: for (var i = 0; i < csvData.length; i++) {
   var prosRivi = csvData[i];
   var imsId = prosRivi["Id"];
   if (!imsId) {
@@ -181,8 +196,20 @@ for (var i = 0; i < csvData.length; i++) {
   }
   var tunniste = prosRivi["Tunniste tiedonhallintamallissa *"];
   if (tunniste) tunniste = tunniste.trim();
-  /* if (!tunniste && tunnisteOverride[imsId]) tunniste = tunnisteOverride[imsId]; */
   var nimi = prosRivi["Nimi"];
+
+  var ylaProsHakuId = prosRivi["Yläprosessin id"];
+  while (imsId != 1 && ylaProsHakuId != 1) {  // tarkistetaan, että prosessin kaikki yläprosessit löytyvät (ettei ole poistetun prosessin alla oleva irtolainen)
+    if (!prosRiviImsIdMap[ylaProsHakuId]) {
+      if (tunniste) {
+        // herjataan vain jos irtoprosessille on jäänyt tiedonhallintamallin tunniste, muuten ei välitetä
+        herjaa(huomiolista, "Prosessin yläprosessi puuttuu listalta, ohitetaan", null, imsId, tunniste, nimi, null, HERJA_KONSOLIVIRHE);
+      }
+      delete prosRiviImsIdMap[imsId];
+      continue prosriviloop;
+    }
+    ylaProsHakuId = prosRiviImsIdMap[ylaProsHakuId]["Yläprosessin id"];
+  }
 
   var tunnisteNimessa = null;
   var match = tunnistePattern.exec(nimi);
