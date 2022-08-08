@@ -40,5 +40,7 @@ public interface IEspooElementViewReferences extends EObject {
     
     String getClassSimpleName();
     
+    String getTiedonhallintamalliKohdeNimi();
+    
 
 }

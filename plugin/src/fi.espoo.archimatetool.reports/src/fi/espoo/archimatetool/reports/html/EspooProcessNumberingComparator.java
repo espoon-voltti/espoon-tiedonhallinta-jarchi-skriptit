@@ -23,14 +23,21 @@ public class EspooProcessNumberingComparator implements Comparator<INameable> {
 			return compareRelationships((IArchimateRelationship)o1, (IArchimateRelationship)o2); 
 		}
 		
-	    Pattern pattern = Pattern.compile("^([OT]|Y[APT])?(\\d+(\\.\\d+)*+\\.?)", Pattern.CASE_INSENSITIVE);
+	    //Pattern pattern = Pattern.compile("^([OT]|Y[APT])?(\\d+(\\.\\d+)*+\\.?)", Pattern.CASE_INSENSITIVE);
+	    Pattern pattern = Pattern.compile("^([OT]|Y[AJP]?)?(\\d+\\.(\\d+|\\d+(\\.\\d+)*)?)($|[^0-9\\.])", Pattern.CASE_INSENSITIVE);
 	    
-	    Matcher matcher1 = pattern.matcher(o1.getName());
+	    
+	    String name1 = o1.getName();
+	    if (name1 != null) name1 = name1.trim().toLowerCase();
+	    String name2 = o2.getName();
+	    if (name2 != null) name2 = name2.trim().toLowerCase();
+	    
+	    Matcher matcher1 = pattern.matcher(name1);
 	    boolean matchFound1 = matcher1.find();
-	    Matcher matcher2 = pattern.matcher(o2.getName());
+	    Matcher matcher2 = pattern.matcher(name2);
 	    boolean matchFound2 = matcher2.find();
 	    
-	    if (!matchFound1 && !matchFound2) return o1.getName().compareTo(o2.getName());
+	    if (!matchFound1 && !matchFound2) return name1.compareTo(name2);
 	    if (!matchFound1) return 1;
 	    if (!matchFound2) return -1;
 	    

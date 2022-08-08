@@ -185,6 +185,14 @@ public class EspooElementInvocationHandler implements InvocationHandler {
 		if ("getClassName".equals(method.getName())) {   // vähän meni hankalaksi näiden kanssa...
 			return target.getClass().getName();
 		}
+		if ("getTiedonhallintamalliKohdeNimi".equals(method.getName())) {
+			if ("BusinessProcess".equals(target.getClass().getSimpleName())) return "Prosessi";
+			else if ("Product".equals(target.getClass().getSimpleName())) return "Tietovaranto";
+			else if ("BusinessFunction".equals(target.getClass().getSimpleName())) return "Tehtäväluokka";
+			else if ("ApplicationCompoment".equals(target.getClass().getSimpleName())) return "Tietojärjestelmä";
+			else if ("BusinessActor".equals(target.getClass().getSimpleName())) return "Organisaatio";
+			else return "tuntematon luokka";
+		}
 		Method targetMethod = null;
 		if (!cachedMethods.containsKey(method)) {
 			targetMethod = target.getClass().getMethod(method.getName(), 
