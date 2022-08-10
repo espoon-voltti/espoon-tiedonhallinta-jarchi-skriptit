@@ -166,6 +166,12 @@ public class EspooElementInvocationHandler implements InvocationHandler {
 		if (proxy instanceof IProperties && "getHTMLContent".equals(method.getName())) {
 			return getPropertyValue("_HTMLContent");
 		}
+		if (proxy instanceof IProperties && "getJulkinenNimi".equals(method.getName())) {
+			return getPropertyValue("Julkinen nimi");
+		}
+		if (proxy instanceof IProperties && "getAlias".equals(method.getName())) {
+			return getPropertyValue("Alias");
+		}
 		if (proxy instanceof IArchimateConcept && "getRelationships".equals(method.getName())) {
 			return getRelationships();
 		}
@@ -184,6 +190,14 @@ public class EspooElementInvocationHandler implements InvocationHandler {
 		}
 		if ("getClassName".equals(method.getName())) {   // vähän meni hankalaksi näiden kanssa...
 			return target.getClass().getName();
+		}
+		if ("getTiedonhallintamalliKohdeNimi".equals(method.getName())) {
+			if ("BusinessProcess".equals(target.getClass().getSimpleName())) return "Prosessi";
+			else if ("Product".equals(target.getClass().getSimpleName())) return "Tietovaranto";
+			else if ("BusinessFunction".equals(target.getClass().getSimpleName())) return "Tehtäväluokka";
+			else if ("ApplicationComponent".equals(target.getClass().getSimpleName())) return "Tietojärjestelmä";
+			else if ("BusinessActor".equals(target.getClass().getSimpleName())) return "Organisaatio";
+			else return "tuntematon luokka";
 		}
 		Method targetMethod = null;
 		if (!cachedMethods.containsKey(method)) {

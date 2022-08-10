@@ -233,6 +233,9 @@ public class HTMLReportExporter {
         
         groupFile.registerRenderer(String.class, new StringRenderer());
         
+        ST stHaku = groupFile.getInstanceOf("haku");
+        writeHaku(new File(targetFolder, "haku.html"), stHaku, fModel);
+
         // Write model purpose and properties html
         writeElement(new File(elementsFolder, "model.html"), stFrame, fModel); //$NON-NLS-1$
         
@@ -246,7 +249,7 @@ public class HTMLReportExporter {
         writeDiagrams(imagesFolder, viewsFolder, stFrame);
         
         setProgressSubTask(Messages.HTMLReportExporter_13, true);
-        
+               
         // Write root model.html frame
         ST stModel = groupFile.getInstanceOf("modelreport"); //$NON-NLS-1$
         stModel.add("model", fModel); //$NON-NLS-1$
@@ -345,6 +348,21 @@ public class HTMLReportExporter {
         updateProgress();
     }
     
+    private void writeHaku(File hakuFile, ST stHaku, EObject component) throws IOException {
+        stHaku.remove("model"); //$NON-NLS-1$
+        EObject wrappedComponent = component;
+        if (component instanceof IProperties && !(component instanceof IEspooElementViewReferences)) {
+        	wrappedComponent = (EObject)EspooElementInvocationHandler.wrapEspooProxy(component);
+        }
+        stHaku.add("model", wrappedComponent); //$NON-NLS-1$
+        
+        try(OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(hakuFile), "UTF8")) { //$NON-NLS-1$
+            writer.write(stHaku.render());
+        }
+
+        updateProgress();
+    }
+
     /**
      * Write graphical objects
      */
