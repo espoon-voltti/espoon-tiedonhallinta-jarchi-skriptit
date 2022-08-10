@@ -1,0 +1,165 @@
+
+expandFolderForQuery(folder) ::= <<
+^folder.Folders:{f |
+	^expandFolderForQuery(f)^
+}^
+^folder.Elements:{c |
+	^if(c.Source)^
+	^elseif(c.ConnectionRouterType)^
+	^else^
+		dataElements.push({id:"^c.Id^", tyyppi:decodeURL("^c.TiedonhallintamalliKohdeNimi;format="url-encode"^"), omaNakyma:"^c.OmaNakyma^", name:decodeURL("^c.Name;format="url-encode"^"), julkinenNimi:decodeURL("^c.JulkinenNimi;format="url-encode"^"), alias:decodeURL("^c.Alias;format="url-encode"^")\});
+	^endif^
+}^
+>>
+
+hakuTabPanel(model) ::= <<
+			<div role="tabpanel">
+				<!-- Nav tabs -->
+				<ul class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a href="#query" aria-controls="query" role="tab" data-toggle="tab" class="i18n-query"></a></li>
+				</ul>
+		
+				<!-- Tab panes -->
+				<div class="tab-content">
+						<div role="tabpanel" class="tab-pane active" id="query">
+						<br>
+						<style>
+						#myprompt {
+						    width: 60%;
+						    font-family: Consolas,Monaco, monospace;
+						}
+						</style>
+						
+						<div id='myconsole'></div>
+						
+						<p>
+							<input id='myprompt' autofocus/> <button id='haku'>Hae</button>
+						</p>
+						<div id='hakutulos'></div>
+						
+						<script>
+							function decodeURL(s) {
+								return decodeURIComponent(s.replace(/\+/g, "%20"));
+							}
+							
+							var dataElements = [ ];	  
+							
+							^expandFolderForQuery(model)^
+
+							function namecompare(left, right) {
+								var leftname = left ? left.toUpperCase() : left;
+								var rightname = right ? right.toUpperCase() : right;
+								if (leftname > rightname) return 1;
+								if (leftname < rightname) return -1;
+								return 0;
+							}
+
+							function prosessicompare(left, right) {
+								var tunnistePattern = /\^(([OT]|Y[AJP]?)?\d+\.(\d+|\d+(\.\d+)*)?)($|[\^0-9\.])/;
+								var matchleft = tunnistePattern.exec(left);
+								var matchright = tunnistePattern.exec(right);
+								if (!matchleft && !matchright) return namecompare(left, right);
+								if (!matchleft) return 1;
+								if (!matchright) return -1;
+								var leftparts = matchleft[1].split(".");
+								var rightparts = matchright[1].split(".");
+
+								var i = 0;
+								while (i < leftparts.length && i < rightparts.length) {
+									var leftmatch = leftparts[i].match(/(\d+)/);  // vertaillaan pisteen edeltävästä osasta vain numero-osaa
+									var rightmatch = rightparts[i].match(/(\d+)/);
+									if (leftmatch && rightmatch) {
+										if (parseInt(leftmatch[0]) > parseInt(rightmatch[0])) return 1;
+										if (parseInt(leftmatch[0]) < parseInt(rightmatch[0])) return -1;
+									} else {
+										var retval = namecompare(leftparts[i], rightparts[i]);
+										if (retval) return retval;
+									}
+									i++;
+								}
+                                if (leftparts.length > i) return 1;
+                                if (rightparts.length > i) return -1;
+                                return 0;
+                            }
+
+							function hae() {
+								var haetaan = document.getElementById("myprompt").value.toLowerCase();
+								var tulokset = [];
+								for (i = 0; i < dataElements.length; i++) {
+									var elem = dataElements[i];
+			                        if (elem.omaNakyma && (elem.name.toLowerCase().indexOf(haetaan) >= 0 ||
+			                            elem.julkinenNimi.toLowerCase().indexOf(haetaan) >= 0 ||
+			                            elem.alias.toLowerCase().indexOf(haetaan) >= 0)) 
+									{
+                                        tulokset.push(elem);
+									}
+								}
+								tulokset.sort(function (left, right) {
+									var tyyppicmp = namecompare(left.tyyppi, right.tyyppi);
+									if (tyyppicmp) return tyyppicmp;
+									if (left.tyyppi == "Prosessi") {
+										var prosessicmp = prosessicompare(left.name, right.name);
+										if (prosessicmp) return prosessicmp;
+									}
+									return namecompare(left.name, right.name);
+								});
+                                var sisalto = '';
+								for (i = 0; i < tulokset.length; i++) {
+									var elem = tulokset[i];
+                                    sisalto += '<p>' + elem.tyyppi + ': <a href="id-d5e89df24f18489492d79bd017b210f2/views/' + elem.omaNakyma + '.html">' + elem.name + '</a>';
+                                    if (elem.julkinenNimi) sisalto += ' (' + elem.julkinenNimi + ')';
+                                    if (elem.alias) sisalto += '<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Alias: ' + elem.alias + ']';
+                                    sisalto += "<p>\n";
+								}
+                                document.getElementById("hakutulos").innerHTML = sisalto;
+							}
+
+							document.getElementById('haku').onclick = hae;
+                            document.getElementById('myprompt').onkeydown = function (event) {
+								if (event.which === 13) hae();
+                            }
+							
+						</script> 
+						</div>
+			  </div>
+			</div>
+>>
+
+haku(model, map, isviewfor) ::= <<
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html class="frame" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>^model.Name^</title>
+
+	<!-- JQUERY (use 1.x branch to be compatible with IE 6/7/8) -->
+	<script type="text/javascript" src="lib/jquery/js/jquery-1.11.2.min.js"></script>
+	<!-- BOOTSTRAP -->
+	<link type="text/css" rel="stylesheet" href="lib/bootstrap/css/bootstrap-3.3.2.min.css">
+	<link type="text/css" rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme-3.3.2.min.css">
+	<script type="text/javascript" src="lib/bootstrap/js/bootstrap-3.3.2.min.js"></script>
+	<!-- REPORT SPECIFIC -->
+	<link type="text/css" rel="stylesheet" href="css/model.css">
+	<link type="text/css" rel="stylesheet" href="css/i18n.css">
+	<script type="text/javascript" src="js/frame.js"></script>
+	<script type="text/javascript" src="js/imageMapResizer.min.js"></script>
+</head>
+
+<body>
+	<div class="panel panel-default root-panel">
+		
+		<div class="panel-heading root-panel-heading">
+            <!-- Name -->
+            <b>^model.Name;format="xml-encode"^</b>
+		</div>
+		
+		<div class="panel-body root-panel-body">
+			^hakuTabPanel(model)^
+
+		</div>
+	</div>
+	<script type="text/javascript">imageMapResize();</script>
+</body>
+</html>
+>>
+

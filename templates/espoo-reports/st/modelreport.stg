@@ -95,6 +95,8 @@ modelreport(model, strategyFolder, businessFolder, applicationFolder, technology
 						</li>
 					<!-- END OF STRINGTEMPLATE CODE -->
 					</ul>
+				    <a href="haku.html" target="view">Haku</a>
+					
 				</div>
 			</div>
 		</div>

@@ -2,3 +2,4 @@ delimiters "^", "^"
 
 import "modelreport.stg"
 import "frame.stg"
+import "haku.stg"
