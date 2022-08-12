@@ -1,0 +1,102 @@
+﻿/*
+ * Tätä skriptiä voidaan käyttää tulostamaan halutut tietojärjestelmien propertyjen arvot, poistamaan tietyn nimiset
+ * propertyt, nimeämään uudelleen tietyt propertyt tai varmistamaan tietyn propertyn olemassa olo.
+ */
+
+"use strict";
+
+console.show();
+
+console.log("> Varmistetaan tietojärjestelmien propertyja");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+//var tulostettavat = ["_Vastuuhenkilö", "_Yhteyshenkilö", "Virallinen", "Yhteyshenkilö", "_Lisätieto", "_VanhaNimi", "_Uudet tiedot"];
+var tulostettavat = ["_JärjestelmäsalkunVapaateksti"];
+var poistettavat = ["Avointen rajapintojen kuvaus", ];
+var uudelleennimettavat = {
+  "_Omistaja": "Omistaja",
+  "Kuvaileva nimi": "Julkinen nimi",
+  "Kuvailevaksi nimeksi": "Julkinen nimi"
+};
+var varmistettavat = [];
+
+var liittyma_tulostettavat = ["_ArchissaLisätty"];
+var liittyma_poistettavat = ["Kriittisyys"];
+var liittyma_uudelleennimettavat = { };
+var liittyma_varmistettavat = [];
+
+$("application-component").filter(fth).each(function (jarj) {
+  for (var i = 0; i < poistettavat.length; i++) {
+    if (jarj.prop(poistettavat[i]) !== null) {
+      console.log("- Poistetaan property " + poistettavat[i] + " järjestelmältä " + jarj);
+      jarj.removeProp(poistettavat[i]);
+    }
+  }
+
+  for (var propkey in uudelleennimettavat) {
+    if (jarj.prop(propkey) !== null) {
+      console.log("- Nimetään property " + propkey + "->" + uudelleennimettavat[propkey] + " järjestelmällä " + jarj);
+      if (jarj.prop(uudelleennimettavat[propkey])) {
+        console.error("- EI NIMETÄ UUDELLEEN " + propkey + "->" + uudelleennimettavat[propkey] + " järjestelmällä " + jarj + " koska kohdepropertylla on jo arvo!");
+      } else {
+        jarj.prop(uudelleennimettavat[propkey], jarj.prop(propkey));
+        jarj.removeProp(propkey);
+      }
+    }
+  }
+
+  for (var i = 0; i < varmistettavat.length; i++) {
+    if (jarj.prop(varmistettavat[i]) === undefined) {
+      console.log("- Lisätään property " + varmistettavat[i] + " järjestelmälle " + jarj);
+      jarj.prop(varmistettavat[i], "");
+    }
+  }
+
+  for (var i = 0; i < tulostettavat.length; i++) {
+    if (jarj.prop(tulostettavat[i]) !== null) {
+      console.log("- [" + jarj + "] " + tulostettavat[i] + " = " + jarj.prop(tulostettavat[i]));
+    }
+  }
+});
+
+console.log("> Varmistetaan liittymien propertyja");
+
+var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("application-component").filter(fth).outRels("flow-relationship").filter(fth).each(function (rel) {
+  for (var i = 0; i < liittyma_poistettavat.length; i++) {
+    if (rel.prop(liittyma_poistettavat[i]) !== null) {
+      console.log("- Poistetaan property " + liittyma_poistettavat[i] + " liittymältä " + rel + " (" + rel.source + " -> " + rel.target + ")");
+      rel.removeProp(liittyma_poistettavat[i]);
+    }
+  }
+
+  for (var propkey in liittyma_uudelleennimettavat) {
+    if (rel.prop(propkey) !== null) {
+      console.log("- Nimetään property " + propkey + "->" + liittyma_uudelleennimettavat[propkey] + " järjestelmällä " + rel + " (" + rel.source + " -> " + rel.target + ")");
+      if (!rel.prop(liittyma_uudelleennimettavat[propkey])) {
+        console.error("- EI NIMETÄ UUDELLEEN " + propkey + "->" + liittyma_uudelleennimettavat[propkey] + " järjestelmällä " + rel + " (" + rel.source + " -> " + rel.target + ")" + " koska kohdepropertylla on jo arvo!");
+      } else {
+        rel.prop(liittyma_uudelleennimettavat[propkey], rel.prop(propkey));
+        rel.removeProp(propkey);
+      }
+    }
+  }
+
+  for (var i = 0; i < liittyma_varmistettavat.length; i++) {
+    if (rel.prop(liittyma_varmistettavat[i]) === undefined) {
+      console.log("- Lisätään property " + liittyma_varmistettavat[i] + " järjestelmälle " + rel + " (" + rel.source + " -> " + rel.target + ")");
+      rel.prop(liittyma_varmistettavat[i], "");
+    }
+  }
+
+  for (var i = 0; i < liittyma_tulostettavat.length; i++) {
+    if (rel.prop(liittyma_tulostettavat[i]) !== null) {
+      console.log("- [" + rel + " (" + rel.source + " -> " + rel.target + ")] " + liittyma_tulostettavat[i] + " = " + rel.prop(liittyma_tulostettavat[i]));
+    }
+  }
+
+});
+
+console.log("> Valmis");
+console.log();
+

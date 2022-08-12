@@ -1,17 +1,17 @@
 ﻿/*
- * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla prosesseilla
+ * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla tehtäväluokilla
  */
 
 "use strict";
 
 console.show();
 
-console.log("> Listataan prosessien propertyjen käyttökertojen määrä");
+console.log("> Listataan tehtäväluokkien propertyjen käyttökertojen määrä");
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
-$("business-process").filter(fth).each(function (pros) {
-  var propkeys = pros.prop();
+$("business-function").filter(fth).each(function (tl) {
+  var propkeys = tl.prop();
   for (var i = 0; i < propkeys.length; i++) {
     if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
     propertymap[propkeys[i]]++;

@@ -1,17 +1,17 @@
 ﻿/*
- * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla prosesseilla
+ * New Archi Script
  */
 
 "use strict";
 
 console.show();
 
-console.log("> Listataan prosessien propertyjen käyttökertojen määrä");
+console.log("> Listataan tietovarantojen propertyjen käyttökertojen määrä");
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
-$("business-process").filter(fth).each(function (pros) {
-  var propkeys = pros.prop();
+$("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tv) {
+  var propkeys = tv.prop();
   for (var i = 0; i < propkeys.length; i++) {
     if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
     propertymap[propkeys[i]]++;

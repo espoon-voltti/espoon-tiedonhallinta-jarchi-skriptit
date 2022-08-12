@@ -1,0 +1,59 @@
+﻿/*
+ * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla tietojärjestelmillä 
+ * ja tietojärjestelmien välisillä liittymillä
+ */
+
+"use strict";
+
+console.show();
+
+console.log("> Listataan tietojärjestelmien propertyjen käyttökertojen määrä");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+var propertymap = {};
+$("application-component").filter(fth).each(function (jarj) {
+  var propkeys = jarj.prop();
+  for (var i = 0; i < propkeys.length; i++) {
+    if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
+    propertymap[propkeys[i]]++;
+    /*if (propkeys[i] == "_VanhaNimi") {
+      console.log(jarj.name + "[" + propkeys[i] + "] = " + jarj.prop(propkeys[i]) + "; Järjestelmäsalkku ID = " + jarj.prop("Järjestelmäsalkku ID"));
+    }*/
+  }
+});
+
+var propnames = [];
+for (var propkey in propertymap) {
+  propnames.push(propkey);
+}
+propnames.sort();
+
+for (var i = 0; i < propnames.length; i++) {
+  console.log(propertymap[propnames[i]] + "\t" + propnames[i]);
+}
+
+console.log();
+console.log("> Listataan liittymien propertyjen käyttökertojen määrä");
+
+var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("application-component").filter(fth).outRels("flow-relationship").filter(fth).each(function (rel) {
+  var propkeys = rel.prop();
+  for (var i = 0; i < propkeys.length; i++) {
+    if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
+    propertymap[propkeys[i]]++;
+  }
+});
+
+var propnames = [];
+for (var propkey in propertymap) {
+  propnames.push(propkey);
+}
+propnames.sort();
+
+for (var i = 0; i < propnames.length; i++) {
+  console.log(propertymap[propnames[i]] + "\t" + propnames[i]);
+}
+
+console.log("> Valmis");
+console.log();
+

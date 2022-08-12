@@ -1,17 +1,17 @@
 ﻿/*
- * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla prosesseilla
+ * Listaa montako kertaa tietyn niminen property esiintyy tiedonhallintamalliin kuuluvilla business actor elementeillä
  */
 
 "use strict";
 
 console.show();
 
-console.log("> Listataan prosessien propertyjen käyttökertojen määrä");
+console.log("> Listataan organisaatioiden propertyjen käyttökertojen määrä");
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 var propertymap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
-$("business-process").filter(fth).each(function (pros) {
-  var propkeys = pros.prop();
+$("business-actor").filter(fth).each(function (org) {
+  var propkeys = org.prop();
   for (var i = 0; i < propkeys.length; i++) {
     if (!propertymap[propkeys[i]]) propertymap[propkeys[i]] = 0;
     propertymap[propkeys[i]]++;

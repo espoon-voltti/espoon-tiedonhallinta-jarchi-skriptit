@@ -467,7 +467,7 @@ if (filePath) {
           teksti += muuttunut + " ";
         }
         if (teksti) {
-          nykyJarj.prop("_Päivitetty", aikaleima);
+          rel.prop("_Päivitetty", aikaleima);
           console.log("  - Liittymällä " + rel.name + " (" + rel.source.name + " - " + rel.target.name + ") muuttunut " + teksti);
         } else {
           //console.log("  - Liittymällä " + rel.name + " ei muuttuneita tietoja.");
@@ -475,24 +475,12 @@ if (filePath) {
       }
 
       //var poistaminen = 0;
-      for (var relId in nykyRelList) {  // relaatiot, joita ei enää näy salkussa -> jätetään mutta merkitään tiedonhallintamallin ulkopuolisiksi
+      for (var relId in nykyRelList) {  // relaatiot, joita ei enää näy salkussa 
         if ($("#" + relId).first().prop("_ArchissaLisätty")) continue;  // ohitetaan jos ko. property asetettu
-        /* if (!poistaminen) {
-          poistaminen = window.confirm("Poistetaanko poistuneet relaatiot kokonaan? Muuten vain merkitään poistuneiksi.") ? 1 : 2;
-        } */
         var vanhaRel = nykyRelList[relId];
-        //muuttuneetJarj[vanhaRel.source.id] = "1";
-        //muuttuneetJarj[vanhaRel.target.id] = "1";
         muuttunutMerkinta(vanhaRel.source, vanhaRel.target, aikaleima);
-        // if (poistaminen == 1) {
-          console.log("  - POISTETTIIN relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
-          vanhaRel.delete();
-        /* } else {
-          vanhaRel.removeProp("_Tiedonhallintamalli");
-          vanhaRel.prop("_PoistunutSalkusta", "1");
-          vanhaRel.prop("_Päivitetty", aikaleima);
-          console.log("  - MERKITÄÄN POISTUNEEKSI relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
-        }*/
+        console.log("  - POISTETTIIN relaatio jota ei enää näy salkussa järjestelmästä " + vanhaRel.source.name + " järjestelmään " + vanhaRel.target.name + ", tiedot " + vanhaRel.name);
+        vanhaRel.delete();
       }
 
     } else console.log("> Liittymä-CSV jätettiin valitsematta, ohitetaan");  // if filePath liittymä-csv:lle
@@ -501,7 +489,7 @@ if (filePath) {
       var vtjarj = vapaatekstiMap[jarjNimi]
       var teksti = "Tietohallinnon vapaatekstijärjesterjestelmää " + vtjarj + " ei enää tullut";
       console.log(teksti);
-      if (window.confirm(teksti + " - poistetaanko?")) {
+      if (window.confirm(teksti + " - poistetaanko (kannattanee poistaa)?")) {
         console.log("POISTETAAN järjestelmä " + jarjNimi);
         vtjarj.delete();
       }
@@ -509,17 +497,6 @@ if (filePath) {
 
     model.prop("Päivitetty Järjestelmäsalkusta", aikaleima);
     console.log("> Parsing Complete")
-
-    /* var selection = $("empty");
-    for (var jarjid in muuttuneetJarj) {
-      selection.add($("#"+jarjid));
-    }
-    if (selection.size() > 0) {
-      if (window.confirm("Päivitetäänkö muuttuneiden järjestelmien näkymät (" + selection.size() + " kpl)?")) {
-        var korvaakaikki = 1;
-        load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo näkymä tietojärjestelmälle.ajs");
-      }
-    }*/
 
     console.log("> Valmis");
 }

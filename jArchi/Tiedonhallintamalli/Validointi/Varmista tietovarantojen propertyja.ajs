@@ -1,0 +1,55 @@
+﻿/*
+ * Tätä skriptiä voidaan käyttää tulostamaan halutut tietovarantojen propertyjen arvot, poistamaan tietyn nimiset
+ * propertyt, nimeämään uudelleen tietyt propertyt tai varmistamaan tietyn propertyn olemassa olo.
+ */
+
+"use strict";
+
+console.show();
+
+console.log("> Varmistetaan tietovarantojen propertyjä");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+
+var tulostettavat = [
+  "_Yhteyshenkilö",
+  ];
+var poistettavat = [""];
+var uudelleennimettavat = {
+  "_Omistaja": "Omistaja"
+};
+var varmistettavat = [];
+
+$("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tv) {
+  for (var i = 0; i < poistettavat.length; i++) {
+    if (tv.prop(poistettavat[i]) !== null) {
+      console.log("- Poistetaan property " + poistettavat[i] + " tietovarastolta " + tv);
+      tv.removeProp(poistettavat[i]);
+    }
+  }
+
+  for (var propkey in uudelleennimettavat) {
+    if (tv.prop(propkey) !== null) {
+      console.log("- Nimetään property " + propkey + "->" + uudelleennimettavat[propkey] + " tietovarastolla " + tv);
+      tv.prop(uudelleennimettavat[propkey], tv.prop(propkey));
+      tv.removeProp(propkey);
+    }
+  }
+
+  for (var i = 0; i < varmistettavat.length; i++) {
+    if (tv.prop(varmistettavat[i]) === undefined) {
+      console.log("- Lisätään property " + varmistettavat[i] + " tietovarastolle " + tv);
+      tv.prop(varmistettavat[i], "");
+    }
+  }
+
+  for (var i = 0; i < tulostettavat.length; i++) {
+    if (tv.prop(tulostettavat[i]) !== null) {
+      console.log("- " + tv + ": " + tulostettavat[i] + " = " + tv.prop(tulostettavat[i]));
+    }
+  }
+
+});
+
+console.log("> Valmis");
+console.log();
+

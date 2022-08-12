@@ -21,8 +21,8 @@ function varitaNakyma(varitettavaNakyma) {
     if (viewelem.type == "application-component" && viewelem.prop("Järjestelmäsalkku ID") > 0) {
       var lisalisuke = "";
       if (varitettavaNakyma.prop("_Järjestelmäkartta")) {
-        if (viewelem.concept.prop("_PääAliJärj") == "P") lisalisuke = "↑ ";
-        else if (viewelem.concept.prop("_PääAliJärj") == "A") lisalisuke = "↓ ";
+        if (viewelem.concept.prop("_PääAliJärj") == "P") lisalisuke = "↑ ";  // ▲
+        else if (viewelem.concept.prop("_PääAliJärj") == "A") lisalisuke = "↓ ";  // ▼
       }
       viewelem.setLabelExpression("${name}\n" + lisalisuke + lisuke + "\n[${property:Omistaja}, ${property:Kriittisyys}]");
     } else if (viewelem.type == "business-function")

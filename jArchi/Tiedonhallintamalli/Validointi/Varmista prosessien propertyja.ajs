@@ -1,5 +1,6 @@
 ﻿/*
- * New Archi Script
+ * Tätä skriptiä voidaan käyttää tulostamaan halutut prosessien propertyjen arvot, poistamaan tietyn nimiset
+ * propertyt, nimeämään uudelleen tietyt propertyt tai varmistamaan tietyn propertyn olemassa olo.
  */
 
 "use strict";
@@ -9,12 +10,23 @@ console.show();
 console.log("> Varmistetaan prosessien propertyjen olemassaolo ja nimeäminen");
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
-var poistettavat = ["Vastaava viranhaltija"];
+var tulostettavat = [
+  "_ÄläNostaYhteyksiäYlös",
+"_ÄläPiirräAliprosessienYhteyksiä"];
+var poistettavat = [
+  "Vastaava viranhaltija",
+  "Asiakirjahallinnon tehtäväluokat",
+  "_Asiakirjahallinnon tehtäväluokat",
+  "Koskee palvelua",
+  "_Koskee palvelua",
+  "Tyyppi",
+  "_Tyyppi"];
+
 var uudelleennimettavat = {
-  "Asiakirjahallinnon tehtäväluokat": "_Asiakirjahallinnon tehtäväluokat",
-  "Tyyppi": "_Tyyppi",
+ // "Asiakirjahallinnon tehtäväluokat": "_Asiakirjahallinnon tehtäväluokat",  -> poistetaan tämä, ei enää tarvetta
+//  "Tyyppi": "_Tyyppi",  -> poistetaan tämä, ei enää tarvetta
   "_Omistaja": "Omistaja",
-  "Koskee palvelua": "_Koskee palvelua"
+  // "Koskee palvelua": "_Koskee palvelua" -> poistetaan tämä, ei enää tarvetta
 };
 var varmistettavat = ["Koskee asianhallintaa"];
 
@@ -40,6 +52,13 @@ $("business-process").filter(fth).each(function (pros) {
       pros.prop(varmistettavat[i], "");
     }
   }
+
+  for (var i = 0; i < tulostettavat.length; i++) {
+    if (pros.prop(tulostettavat[i]) !== null) {
+      console.log("- " + pros + ": " + tulostettavat[i] + " = " + pros.prop(tulostettavat[i]));
+    }
+  }
+
 });
 
 console.log("> Valmis");
