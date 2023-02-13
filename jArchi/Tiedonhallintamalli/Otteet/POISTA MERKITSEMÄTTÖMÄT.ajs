@@ -27,6 +27,7 @@ if (!window.confirm("POISTETAAN KAIKKI MUUT PAITSI MERKITYT ELEMENTIT JA MUUT PA
 console.log("> Poistetaan näkymiä...");
 var kpl = 0;
 $("view").each(function (view) {
+  if (view.prop("_Merkintä")) return;
   if (view.prop("_KuvattavaKohde")) {  // jos valittuna on esim. kaavio, joka kuvaa tiettyä prosessia, oletetaan käyttäjän tarkoittavan että haluaa kuvata ko. prosessin
       var element = $("#"+view.prop("_KuvattavaKohde")).first();
       if (!element || (element.prop("_Merkintä") != "1" && element.prop("_Merkintä") != "2")) {
