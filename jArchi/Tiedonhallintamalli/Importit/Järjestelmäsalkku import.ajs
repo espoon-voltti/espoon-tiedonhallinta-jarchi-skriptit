@@ -11,7 +11,8 @@ var salkunkentat = {
   "Omistajaorg": null,  // käsitellään erikseen
 
   "Alias": "Alias",
-  "Järj. omistaja": "Vastaava viranhaltija",
+  "Järj. omistaja": "Järjestelmän omistaja",
+  "Toimialan vastuuhenkilö": "Toimialan vastuuhenkilö",
   "Ylläpitovastuu": "Ylläpitovastuu",
   "Järjestelmän kriittisyys kirjain": "Kriittisyys",
   "Elinkaaren vaihe": "Elinkaaren vaihe",

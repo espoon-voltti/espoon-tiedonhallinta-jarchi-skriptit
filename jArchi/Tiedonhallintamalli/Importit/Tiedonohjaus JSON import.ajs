@@ -32,7 +32,7 @@ var dokumentinMetadatat = {
   "Säilytysajan peruste": null,
   "Säilytystapa": null,
   //"Tiedonhallinta": null,
-  //"Tietojärjestelmä": null,
+  "Tietojärjestelmä": null,
   "Tietovaranto": null
 }
 
@@ -316,6 +316,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
       lisaaTieto("Siirretäänkö säilytysajan jälkeen arkistoon", "siirto arkistoon ");
       lisaaTieto("Arkistointitapa", "", "", true);
       lisaaTieto("Hävitystapa", "hävitys ");
+      lisaaTieto("Tietojärjestelmä", "tietojärjestelmät ");
       lisaaTieto("Tietovaranto");
       kuvaus += "\n";  
     }

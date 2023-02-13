@@ -16,7 +16,9 @@ var poistettavat = ["Avointen rajapintojen kuvaus", ];
 var uudelleennimettavat = {
   "_Omistaja": "Omistaja",
   "Kuvaileva nimi": "Julkinen nimi",
-  "Kuvailevaksi nimeksi": "Julkinen nimi"
+  "Kuvailevaksi nimeksi": "Julkinen nimi",
+  "Vastaava viranhaltija": "Järjestelmän omistaja",
+  "Järjestelmän omistaja (vastaava viranhaltija)": "Järjestelmän omistaja"
 };
 var varmistettavat = [];
 
