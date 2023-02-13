@@ -3,12 +3,15 @@
  * korvattavalta elementiltä korvaavalle elementille. Eli ns. "merge"-toiminto. Olemme käyttäneet tätä
  * tiedon laadun parantamisessa, esim. korvaamaan Excelistä väärin kirjoitulla nimellä tuotu järjestelmäelementti
  * Järjestelmäsalkusta tuodulla elementillä.
- * Toimii tällä hetkellä tietojärjestelmille ja tietojärjestlemille (voi käyttää myös ristiin).
+ * Toimii tällä hetkellä tietojärjestelmille ja tietovarannoille (voi käyttää myös ristiin).
  * Kysyy ensin ponnahdusikkunassa, mikä valituista elementeistä on se, joksi muut vaihdetaan. Päivittää
  * ja värittää uudelleen sen jälkeen ne näkymät, joilta korvattavat elementit löytyivät.
  */
 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
 
 function korvauscompare(left, right) {
   lefttihla = left.prop("_Tiedonhallintamalli") == "1";
@@ -88,42 +91,66 @@ if (!valinta || valinta < 1 || valinta > kohteet.size()) {
 korvaava = kohteet.get(valinta-1);
 korvattavat = kohteet.not("#"+korvaava.id);
 
-paivitettavatNakymat = new java.util.HashSet();
+//paivitettavatNakymat = new java.util.HashSet();
 
 console.log(">>> Aletaan korvata kohteeksi: " + korvaava + " [" + korvaava.prop("Omistaja") + "]");
 korvattavat.each(function (korvattava) {
   console.log("Korvataan kohdetta " + korvattava + " [" + korvattava.prop("Omistaja") + "]");
 
   // luodaan uudet relaatiot malliin tai käytetään olemassa olevia jos nimet vastaavat
-  korvrels = new java.util.HashMap();
+  //korvrels = new java.util.HashMap();
   $("#"+korvattava.id).inRels().each(function (inrel) {
     if (inrel.type == "association-relationship" && inrel.name == "vastaa") return; // ei huomioida omistaja-relaatioita
+    if (inrel.type == "composition-relationship" || inrel.type == "realization-relationship") { // ei muuteta järjestelmäkokonaisuus-/alijärjestelmäsuhteita
+      console.log("- Ei muuteta järjestelmäkokonaisuus-/alijärjestelmäsuhdetta: " + inrel.source + " - " + inrel.target);
+      return;
+    }
+    if (inrel.type == "flow-relationship") { // ei muuteta liittymää / tietovirtaa
+      console.log("- Ei muuteta liittymää: " + inrel.source + " - " + inrel.target + " (" + inrel.name + ")");
+      return;
+    }
     korvaavarel = null;
     $("#"+korvaava.id).inRels().each(function (korvinrel) {
       if ((inrel.source.id == korvinrel.source.id) && (inrel.name == korvinrel.name)) {
-        console.log("- Löytyi vastaava in-relaatio: " + inrel + " == " + korvinrel + " - " + inrel.source);
+        console.log("- Löytyi vastaava in-relaatio: " + inrel + " == " + korvinrel + " / " + korvinrel.source + " - " + korvinrel.target);
         korvaavarel = korvinrel;
       }
     });
     if (!korvaavarel) {
       korvaavarel = model.createRelationship(inrel.type, inrel.name, inrel.source, korvaava);
-      console.log("- Luotiin uusi in-relaatio: " + korvaavarel + " - " + inrel.source);
+      muuttunutMerkinta(inrel.source);
+      console.log("- Luotiin uusi in-relaatio: " + korvaavarel + " / " + korvaavarel.source + " - " + korvaavarel.target);
     }
-    korvrels.put(inrel, korvaavarel);
+    muuttunutMerkinta(korvaava, korvattava);
+    console.log("- Poistetaan relaatio " + inrel + " / " + inrel.source + " - " + inrel.target);
+    inrel.delete();
+    //korvrels.put(inrel, korvaavarel);
   });
   $("#"+korvattava.id).outRels().each(function (outrel) {
+    if (outrel.type == "composition-relationship" || outrel.type == "realization-relationship") { // ei muuteta järjestelmäkokonaisuus-/alijärjestelmäsuhteita
+      console.log("- Ei muuteta järjestelmäkokonaisuus-/alijärjestelmäsuhdetta: " + outrel.source + " - " + outrel.target);
+      return;
+    }
+    if (outrel.type == "flow-relationship") { // ei muuteta liittymiä / tietovirtoja
+      console.log("- Ei muuteta liittymää: " + outrel.source + " - " + outrel.target + " (" + outrel.name + ")");
+      return;
+    }
     korvaavarel = null;
     $("#"+korvaava.id).outRels().each(function (korvoutrel) {
       if ((outrel.target.id == korvoutrel.target.id) && (outrel.name == korvoutrel.name)) {
-        console.log("- Löytyi vastaava out-relaatio: " + outrel + " == " + korvoutrel + " - " + outrel.target);
+        console.log("- Löytyi vastaava out-relaatio: " + outrel + " == " + korvoutrel + " / " + korvoutrel.source + " - " + korvoutrel.target);
         korvaavarel = korvoutrel;
       }
     });
     if (!korvaavarel) {
       korvaavarel = model.createRelationship(outrel.type, outrel.name, korvaava, outrel.target);
-      console.log("- Luotiin uusi out-relaatio: " + korvaavarel + " - " + outrel.target);
+      muuttunutMerkinta(outrel.target);
+      console.log("- Luotiin uusi out-relaatio: " + korvaavarel + " / " + korvaavarel.source + " - " + korvaavarel.target);
     }
-    korvrels.put(outrel, korvaavarel);
+    muuttunutMerkinta(korvaava, korvattava);
+    console.log("- Poistetaan relaatio " + outrel + " / " + outrel.source + " - " + outrel.target);
+    outrel.delete();
+    //korvrels.put(outrel, korvaavarel);
   });
 
   // käydään läpi näkymät, joissa korvattava esiintyy
@@ -176,8 +203,10 @@ korvattavat.each(function (korvattava) {
   }); */
   // näkymät käyty läpi
 
-  console.log("- Poistetaan korvattava elementti, relaatiot toivottavasti lähtee sen mukana");
-  korvattava.delete();
+  if (window.confirm("Poistetaanko " + korvattava + "?")) {
+    console.log("- Poistetaan korvattava elementti " + korvattava);
+    korvattava.delete();
+  }
 
 });
 
