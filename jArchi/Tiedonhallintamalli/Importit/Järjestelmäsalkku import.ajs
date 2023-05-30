@@ -192,6 +192,7 @@ if (filePath) {
       if (uusiNimi != nykyJarj.name) {
         nykyJarj.name = uusiNimi;
         muutos["Nimi"] = uusiNimi;
+        muuttunutMerkinta(nykyJarj, null, aikaleima);  // näkymän nimen muutos
       }
       if (jarjRivi["Järjestelmänimi"] != nykyJarj.prop("_NimiSalkussa")) {
         if (nykyJarj.prop("_NimiSalkussa")) {  // vanha nimi talteen vain jos sellainen oli
@@ -234,6 +235,7 @@ if (filePath) {
           nykyJarj.prop("Omistaja", uusiOmistaja.name);
           muutos["Omistaja"] = uusiOmistaja.name;
           console.log("VAIHDETAAN JÄRJESTELMÄN " + nykyJarj.name + " OMISTAJAKSI " + uusiOmistaja.name);
+          muuttunutMerkinta(nykyJarj, null, aikaleima);  // näkymä oikeaan kansioon
         } 
       } else {
         var herja = "Järjestelmän " + nykyJarj.name + " salkun omistajatietoa vastaavaa organisaatiota ei löydy (" + jarjRivi["Omistajaorg"] + "). Omistajatieto jätetään asettamatta/muuttamatta. Korjaa puute ja aja import uudelleen.";
