@@ -13,6 +13,7 @@ console.log(">>> Aloitetaan kohteiden yhdistäminen... ");
 var prosessit = [];
 var tietovarannot = [];
 var tietojarjestelmat = [];
+var tehtavaluokat = [];
 var tietosuojaselosteet = [];
 
 var ajankohta = new Date();
@@ -46,11 +47,15 @@ $(selection).each(function (elem) {
     tietojarjestelmat.push(elem);
     return;
   }
+  if (elem.type == "business-function") {
+    tehtavaluokat.push(elem);
+    return;
+  }
   if (elem.type == "representation") {
     tietosuojaselosteet.push(elem);
     return;
   }
-  console.error("Kohde ei ole prosessi, tietovaranto tai tietojärjestelmä: " + elem + ", ei voida jatkaa.");
+  console.error("Kohde ei ole prosessi, tietovaranto, tietojärjestelmä, tehtäväluokka tai tietosuojaseloste: " + elem + ", ei voida jatkaa.");
   exit();
 });
 
@@ -76,6 +81,38 @@ if (tietosuojaselosteet.length) {
       }
     }
   }
+}
+
+if (tehtavaluokat.length) {
+  if (prosessit.length && tietovarannot.length) {
+    if (!window.confirm("Kytketäänkö tehtäväluokka(/-at) [" + tehtavaluokat + "] prosesseihin [" + prosessit + "] ja tietovarantoihin [" + tietovarannot + "]?")) {
+      console.log("Älä valitse tehtäväluokkia jos et halua kytkeä niitä... lopetetaan.");
+      exit();
+    }
+  }
+  for (var i = 0; i < tehtavaluokat.length; i++) {
+    for (var j = 0; j < prosessit.length; j++) {
+      if (onYhteys(tehtavaluokat[i], prosessit[j])) {
+        console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + prosessit[j]);
+      } else {
+        console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " prosessiin " + prosessit[j]);
+        model.createRelationship("serving-relationship", "", prosessit[j], tehtavaluokat[i]);
+        muuttunutMerkinta(tehtavaluokat[i], prosessit[j], aikaleima);
+        laskuri++;
+      }
+    }
+    for (var j = 0; j < tietovarannot.length; j++) {
+      if (onYhteys(tehtavaluokat[i], tietovarannot[j])) {
+        console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + tietovarannot[j]);
+      } else {
+        console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " tietovarantoon " + tietovarannot[j]);
+        model.createRelationship("serving-relationship", "", tietovarannot[j], tehtavaluokat[i]);
+        muuttunutMerkinta(tietovarannot[j], tehtavaluokat[i], aikaleima);
+        laskuri++;
+      }
+    }
+  }
+
 }
 
 if (prosessit.length) {
