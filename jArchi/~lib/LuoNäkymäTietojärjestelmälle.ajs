@@ -91,24 +91,47 @@ function luoNakymaTietojarjestelmalle(element) {
     if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
   }
 
-  var inputliittymat = $("#" + element.id).inRels("flow-relationship").sourceEnds("application-component").filter(fth);
-  inputliittymat.sort(namecompare);
-  var outputliittymat = $("#" + element.id).outRels("flow-relationship").targetEnds("application-component").filter(fth);
-  outputliittymat.sort(tunnistecompare);
-  inputliittymat = inputliittymat.not(outputliittymat);  // jos on sekä luku että kirjoitus, näytetään output-liittymien puolella
-  /*** BEGIN vapaatekstien metsästys */
-  var inputvarsinaiset = inputliittymat.inRels("realization-relationship").sourceEnds("application-component");
-  var outputvarsinaiset = outputliittymat.inRels("realization-relationship").sourceEnds("application-component");
-  var inputnum = inputliittymat.size() + inputvarsinaiset.size();
-  var outputnum = outputliittymat.size() + outputvarsinaiset.size();
-  /*** END vapaatekstien metsästys */
-  var inputkorkeus = inputnum * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
-  var outputkorkeus = outputnum * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
-  var liittymakorkeus = Math.max(inputkorkeus, outputkorkeus);
-  liittymakorkeus = Math.max(liittymakorkeus, 2 * kuvionkorkeus); // vähän extra tilaa itse kuvattavalle järjestelmälle
+  function liittymientiedot(jarjestelmat) {
+    jarjestelmat.sort(namecompare);
+    var retval = {};
+    retval.korkeus = -kuviovaliy;
+    retval.num = 0;
+    retval.jarjestelmat = [];
+    jarjestelmat.each(function (jarj) {
+      var jarjtiedot = {};
+      jarjtiedot.jarjestelma = jarj;
+      var rels = $("#" + element.id).rels("flow-relationship").filter(function (rel) { return (rel.source.id == jarj.id && rel.target.id == element.id) || (rel.source.id == element.id && rel.target.id == jarj.id); });
+      rels.sort(namecompare);
+      jarjtiedot.liittymat = [];
+      rels.each(function (rel) { jarjtiedot.liittymat.push(rel); });
+      jarjtiedot.num = rels.size();
+      jarjtiedot.korkeus = (kuvionkorkeus + kuviovaliy) + (rels.size() > 2 ? (rels.size() - 2) * kuviovaliy : 0);
+      /*** BEGIN vapaatekstien metsästys */
+      jarjtiedot.varsinaiset = [];
+      $("#" + jarj.id).inRels("realization-relationship").sourceEnds("application-component").each(function (jarj2) { jarjtiedot.varsinaiset.push(jarj2); });
+      jarjtiedot.varsinaisenkorkeus = jarjtiedot.varsinaiset.length ? (kuvionkorkeus + kuviovaliy) : 0; // lisätään tila vain yhdelle varsinaiselle, vain yksi käsitellään jos löytyy
+      // jarjtiedot.num += varsinaisetnum; // oli aiemmin tämän tyyppinen, ei tarvita?
+      /*** END vapaatekstien metsästys */
+      retval.jarjestelmat.push(jarjtiedot);
+      retval.korkeus += jarjtiedot.korkeus + jarjtiedot.varsinaisenkorkeus;
+      retval.num++;
+    });
+    return retval;
+  }
+
+  var inputjarjestelmat = $("#" + element.id).inRels("flow-relationship").sourceEnds("application-component").filter(fth);
+  var outputjarjestelmat = $("#" + element.id).outRels("flow-relationship").targetEnds("application-component").filter(fth);
+  inputjarjestelmat = inputjarjestelmat.not(outputjarjestelmat);
+  var inputliittymat = liittymientiedot(inputjarjestelmat);
+  var outputliittymat = liittymientiedot(outputjarjestelmat);
+
+  var liittymakorkeus = Math.max(inputliittymat.korkeus, outputliittymat.korkeus);
+  console.log("inputliittymat.korkeus = " + inputliittymat.korkeus + ", outputliittymat.korkeus = " + outputliittymat.korkeus + ", liittymakorkeus = " + liittymakorkeus);
+  liittymakorkeus = Math.max(liittymakorkeus, 2 * kuvionkorkeus); // vähän extra tilaa itse kuvattavalle järjestelmälle, jos ei ole liittymiä
 
   // lisätään käsillä oleva järjestelmä keskelle
-  var jarjestelmaObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), keskitay(juoksevay, liittymakorkeus, 1, 1), kuvionleveys, kuvionkorkeus);
+  //var jarjestelmaObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), keskitay(juoksevay, liittymakorkeus, 1, 1), kuvionleveys, kuvionkorkeus);
+  var jarjestelmaObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), juoksevay + Math.round((liittymakorkeus - kuvionkorkeus) / 2), kuvionleveys, kuvionkorkeus);
   for (var i = 0; i < tietovarantoObjs.length; i++) {
     var relaatio = $("#" + element.id).outRels("serving-relationship").filter(function (rel) { return rel.target.id == tietovarantoObjs[i].concept.id; }).first();
     if (relaatio) recycledViewAddRelationship(viewObj, relaatio, jarjestelmaObj, tietovarantoObjs[i]);
@@ -119,46 +142,64 @@ function luoNakymaTietojarjestelmalle(element) {
     }
   }
 
-  var i = 1;
-  inputliittymat.each(function (jarj) {
+  var paljon_liittymia = false;
+  var juoksevay_input = juoksevay + Math.round((liittymakorkeus - inputliittymat.korkeus) / 2);
+  inputliittymat.jarjestelmat.forEach(function (jarjtiedot) {
+    console.log(jarjtiedot.jarjestelma);
     /*** BEGIN vapaatekstien metsästys */
-    var varsinainen = $("#" + jarj.id).inRels("realization-relationship").sourceEnds("application-component").first();
-    if (varsinainen) {
-      var varsinaisObj = recycledViewAddElement(viewObj, varsinainen, reunusx, keskitay(juoksevay, liittymakorkeus, i++, inputnum), kuvionleveys, kuvionkorkeus);
+    if (jarjtiedot.varsinaiset.length) {
+      var varsinaisObj = recycledViewAddElement(viewObj, jarjtiedot.varsinaiset[0], reunusx, juoksevay_input, kuvionleveys, kuvionkorkeus);
+      juoksevay_input += kuvionkorkeus + kuviovaliy;
     }
     /*** END vapaatekstien metsästys */
-    var inputObj = recycledViewAddElement(viewObj, jarj, reunusx, keskitay(juoksevay, liittymakorkeus, i++, inputnum), kuvionleveys, kuvionkorkeus);
-    relaatio = $("#" + element.id).inRels("flow-relationship").filter(function (rel) { return rel.source.id == jarj.id; }).first();
-    recycledViewAddRelationship(viewObj, relaatio, inputObj, jarjestelmaObj);
+    var inputObj = recycledViewAddElement(viewObj, jarjtiedot.jarjestelma, reunusx, juoksevay_input + Math.round((jarjtiedot.korkeus - kuvionkorkeus - kuviovaliy) / 2), kuvionleveys, kuvionkorkeus);
+    juoksevay_input += jarjtiedot.korkeus;
+    jarjtiedot.liittymat.forEach(function (liittyma) {
+      console.log("-> " + liittyma);
+      recycledViewAddRelationship(viewObj, liittyma, inputObj, jarjestelmaObj);
+    });
+    if (jarjtiedot.liittymat.length > 2) paljon_liittymia = true;
     /*** BEGIN vapaatekstien metsästys */
-    if (varsinainen) {
-      relaatio = $("#" + jarj.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == varsinainen.id; }).first();
+    if (jarjtiedot.varsinaiset.length) {
+      var relaatio = $("#" + jarjtiedot.jarjestelma.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == jarjtiedot.varsinaiset[0].id; }).first();
+      console.log("*> " + relaatio);
       recycledViewAddRelationship(viewObj, relaatio, varsinaisObj, inputObj);
     }
     /*** END vapaatekstien metsästys */
   });
-  i = 1;
-  outputliittymat.each(function (jarj) {
+  var juoksevay_output = juoksevay + Math.round((liittymakorkeus - outputliittymat.korkeus) / 2);
+  outputliittymat.jarjestelmat.forEach(function (jarjtiedot) {
+    console.log(jarjtiedot.jarjestelma);
     /*** BEGIN vapaatekstien metsästys */
-    var varsinainen = $("#" + jarj.id).inRels("realization-relationship").sourceEnds("application-component").first();
-    if (varsinainen) {
-      var varsinaisObj = recycledViewAddElement(viewObj, varsinainen, kokoleveys - reunusx - kuvionleveys, keskitay(juoksevay, liittymakorkeus, i++, outputnum), kuvionleveys, kuvionkorkeus);
+    if (jarjtiedot.varsinaiset.length) {
+      var varsinaisObj = recycledViewAddElement(viewObj, jarjtiedot.varsinaiset[0], kokoleveys - reunusx - kuvionleveys, juoksevay_output, kuvionleveys, kuvionkorkeus);
+      juoksevay_output += kuvionkorkeus + kuviovaliy;
     }
     /*** END vapaatekstien metsästys */
-    var outputObj = recycledViewAddElement(viewObj, jarj, kokoleveys - reunusx - kuvionleveys, keskitay(juoksevay, liittymakorkeus, i++, outputnum), kuvionleveys, kuvionkorkeus);
-    var relaatio = $("#" + element.id).outRels("flow-relationship").filter(function (rel) { return rel.target.id == jarj.id; }).first();
-    recycledViewAddRelationship(viewObj, relaatio, jarjestelmaObj, outputObj);
-    relaatio = $("#" + element.id).inRels("flow-relationship").filter(function (rel) { return rel.source.id == jarj.id; }).first();
-    if (relaatio) recycledViewAddRelationship(viewObj, relaatio, outputObj, jarjestelmaObj);
+    var outputObj = recycledViewAddElement(viewObj, jarjtiedot.jarjestelma, kokoleveys - reunusx - kuvionleveys, juoksevay_output + Math.round((jarjtiedot.korkeus - kuvionkorkeus - kuviovaliy) / 2), kuvionleveys, kuvionkorkeus);
+    juoksevay_output += jarjtiedot.korkeus;
+    jarjtiedot.liittymat.forEach(function (liittyma) {
+      console.log("<- " + liittyma);
+      if (liittyma.target.id == jarjtiedot.jarjestelma.id) {
+        //console.log("    (T) " + liittyma.source + " -> " + liittyma.target + "; " + jarjestelmaObj + " > " + outputObj);
+        recycledViewAddRelationship(viewObj, liittyma, jarjestelmaObj, outputObj);
+      }
+      if (liittyma.source.id == jarjtiedot.jarjestelma.id) {
+        //console.log("    (S) " + liittyma.source + " -> " + liittyma.target + "; " + outputObj + " > " + jarjestelmaObj);
+        recycledViewAddRelationship(viewObj, liittyma, outputObj, jarjestelmaObj);
+      }
+    });
+    if (jarjtiedot.liittymat.length > 2) paljon_liittymia = true;
     /*** BEGIN vapaatekstien metsästys */
-    if (varsinainen) {
-      relaatio = $("#" + jarj.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == varsinainen.id; }).first();
+    if (jarjtiedot.varsinaiset.length) {
+      var relaatio = $("#" + jarjtiedot.jarjestelma.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == jarjtiedot.varsinaiset[0].id; }).first();
+      console.log("<* " + relaatio);
       recycledViewAddRelationship(viewObj, relaatio, varsinaisObj, outputObj);
     }
     /*** END vapaatekstien metsästys */
   });
 
-  juoksevay += liittymakorkeus + kuviovaliy;
+  juoksevay += liittymakorkeus + (2 * kuviovaliy);
 
   var alijarjestelmat = $("#" + element.id).outRels("composition-relationship").targetEnds("application-component").filter(fth).not($("#" + element.id));
   alijarjestelmat.sort(namecompare);
@@ -177,11 +218,18 @@ function luoNakymaTietojarjestelmalle(element) {
   if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
   juoksevay += Math.round((kuvionkorkeus + kuviovaliy) / 4);
 
+  notekorkeus = 50; // oletuksesta poikkeava
+  if (paljon_liittymia) {
+    var note = createRecycledObject(viewObj, "paljon-liittymia-note", "diagram-model-note", reunusx, juoksevay, noteleveys, notekorkeus);
+    note.setText("Liittymien tiedot näet tarkemmin sivun lopun Yhteydet-välilehdeltä");
+    juoksevay += notekorkeus + kuviovaliy;
+  }
+
   var prosessit = $("#" + element.id).outRels("serving-relationship").targetEnds("business-process").filter(fth);
   prosessit.sort(tunnistecompare);
   if (prosessit.size() > 0) {
     var note = createRecycledObject(viewObj, "prosessit-note", "diagram-model-note", reunusx, juoksevay, noteleveys, notekorkeus);
-    note.setText("Tietojärjestelmää " + element.name + " hyödyntävät prosessit (" + prosessit.size() + " kpl)");
+    note.setText("Tietojärjestelmää " + element.name + " hyödyntävät prosessit (" + prosessit.size() + " kpl):");
     juoksevay += notekorkeus + kuviovaliy;
 
     rivillakpl = Math.min(kuvioitamaxrivi, prosessit.size());
