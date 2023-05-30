@@ -205,6 +205,9 @@ korvattavat.each(function (korvattava) {
 
   if (window.confirm("Poistetaanko " + korvattava + "?")) {
     console.log("- Poistetaan korvattava elementti " + korvattava);
+    $("#" + korvattava.id).rels().each(function (rel) {
+      muuttunutMerkinta(rel.source, rel.target);  // kohde itse tulee merkattua useamman kerran ennen poistamista, mutta eipä haittaa...
+    });
     korvattava.delete();
   }
 
