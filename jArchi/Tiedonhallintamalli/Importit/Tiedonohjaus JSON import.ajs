@@ -11,6 +11,14 @@
  * java -jar saxon-he-10.5.jar "9_4 Dynasty TOS.xml" xml-to-json.xsl > Dynasty-TOS.json
  * Sitten näin syntynyt JSON luetaan sisään tällä jArchi-skriptillä. Espoossa on kaksi eri TOS-ilmentymää Dynastyssa, 
  * joten tässä luetaan kaksi tiedostoa.
+ * 
+ * JSONin pretty print onnistuu esim. pythonilla
+ *  f = open(r"C:\Users\...\Espoon-TOS.json", "r", encoding="utf-8")
+ *  js = json.load(f)
+ *  f.close()
+ *  f2 = open(r"C:\Users\...\Espoon-TOS-formatted.json", "w", encoding="utf-8")
+ *  json.dump(js, f2, indent=2)
+ *  f2.close()
  */
 
 "use strict";
@@ -182,6 +190,7 @@ for (var h = 0; h < tossit.length; h++) {
       if (tehtluokka.name != saatunimi) {
         console.log("- Tehtäväluokan nimi muuttuu: " + tehtluokka.name + " -> " + saatunimi);
         tehtluokka.name = saatunimi;
+        muuttunutMerkinta(tehtluokka, null, aikaleima);  // näkymän nimen muutos
         //muutos.push("Nimi");
       }
     } else {
