@@ -1,4 +1,5 @@
 ﻿/*
+/*
  * Skripti, jolla prosessien tiedot päivitetään lukemalla Espoon IMS:stä viedystä 
  * CSV-tiedostosta käyttäen Papa Parse kirjastoa.
  *
@@ -198,17 +199,27 @@ prosriviloop: for (var i = 0; i < csvData.length; i++) {
   if (tunniste) tunniste = tunniste.trim();
   var nimi = prosRivi["Nimi"];
 
+  if ("poistettu" == tunniste) continue prosriviloop;  // ohitetaan tiedonhallintamallista poistetuksi merkityt
+
   var ylaProsHakuId = prosRivi["Yläprosessin id"];
   while (imsId != 1 && ylaProsHakuId != 1) {  // tarkistetaan, että prosessin kaikki yläprosessit löytyvät (ettei ole poistetun prosessin alla oleva irtolainen)
     if (!prosRiviImsIdMap[ylaProsHakuId]) {
       if (tunniste) {
         // herjataan vain jos irtoprosessille on jäänyt tiedonhallintamallin tunniste, muuten ei välitetä
-        herjaa(huomiolista, "Prosessin yläprosessi puuttuu listalta, ohitetaan", null, imsId, tunniste, nimi, null, HERJA_KONSOLIVIRHE);
+        herjaa(huomioLista, "Prosessin yläprosessi puuttuu listalta, ohitetaan", null, imsId, tunniste, nimi, null, HERJA_KONSOLIINFO);
       }
       delete prosRiviImsIdMap[imsId];
       continue prosriviloop;
     }
-    ylaProsHakuId = prosRiviImsIdMap[ylaProsHakuId]["Yläprosessin id"];
+    var ylaProsRivi = prosRiviImsIdMap[ylaProsHakuId];
+    var ylaProsTunniste = ylaProsRivi["Tunniste tiedonhallintamallissa *"];
+    if (ylaProsTunniste) ylaProsTunniste = ylaProsTunniste.trim();
+    if (tunniste && ylaProsTunniste == "poistettu") {  // ei jatketa myöskään jos yläprosessi on merkitty poistetuksi tiedonhallintamallista, vaikka aliprosesseilla olisikin tunnisteita
+      herjaa(huomioLista, "Prosessin yläprosessilla ei ole tiedonhallintamallin tunnistetta, ohitetaan", ylaProsRivi["nimi"], imsId, tunniste, nimi, null, HERJA_KONSOLIINFO);
+      delete prosRiviImsIdMap[imsId];
+      continue prosriviloop;
+    }
+    ylaProsHakuId = ylaProsRivi["Yläprosessin id"];
   }
 
   var tunnisteNimessa = null;
@@ -314,6 +325,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
     muutos["Nimi"] = nimi;
     nykyPros.name = nimi;
     nykyPros.prop("_NimiPäivitetty", aikaleima);
+    muuttunutMerkinta(nykyPros, null, aikaleima); // näkymän päivitys oikealle nimelle
   }
   if (tunniste != nykyPros.prop("Tunniste")) {
     herjaa(huomioLista, "PROSESSIN TUNNISTE MUUTTUU", "Vanha: \"" + nykyPros.prop("Tunniste") + "\", uusi: \"" + tunniste + "\"",
@@ -397,6 +409,7 @@ for (var i = 0; i < valitutRivit.length; i++) {
       nykyPros.prop("Omistaja", uusiOmistaja.name);
       muutos["Omistaja"] = uusiOmistaja;
       console.log("VAIHDETAAN PROSESSIN " + nykyPros.name + " OMISTAJAKSI " + uusiOmistaja.name + " (aiempi oli " + nykyOmistaja + ")");
+      muuttunutMerkinta(nykyPros, null, aikaleima);  // näkymän päivitys oikeaan kansioon
     } 
   } else {
     herjaa(huomioLista, "Prosessin IMS omistajatietoa vastaavaa organisaatiota ei löydy. Omistajatieto jätetään asettamatta/muuttamatta. Korjaa puute ja aja import uudelleen.",
@@ -554,6 +567,9 @@ for (var poistunutId in prosArchiIdMap) {  // Jäljellä vain salkussa olleet jo
   if (!poistunutPros.name.endsWith("(POISTUNUT IMS:STÄ)")) poistunutPros.name = poistunutPros.name + " (POISTUNUT IMS:STÄ)";
   poistunutPros.prop("_Poistuneeksi merkitty", aikaleima);
   poistunutPros.prop("_Päivitetty", aikaleima);
+  $("#" + poistunutPros.id).outRels("specialization-relationship").each(function (rel) {
+    muuttunutMerkinta(rel.source, rel.target, aikaleima); // merkataan varuiksi poistuneen mahdollinen ylärposessikin muuttuneeksi
+  });
   var kansio = $("#"+prosessitFolder.id).children("folder.POISTUNEET").first();
   if (kansio == null) {
     kansio = prosessitFolder.createFolder("POISTUNEET");
