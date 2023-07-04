@@ -13,8 +13,7 @@ import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
-import com.archimatetool.editor.preferences.IPreferenceConstants;
-import com.archimatetool.editor.preferences.Preferences;
+import com.archimatetool.editor.ArchiPlugin;
 import com.archimatetool.editor.utils.StringUtils;
 
 import fi.espoo.archimatetool.reports.preferences.IEspooPreferenceConstants;
@@ -85,9 +84,7 @@ public class EspooHtmlReportsPlugin extends AbstractUIPlugin {
      * @return Default Espoo user template folder
      */
     public File getDefaultUserTemplatesFolder() {
-        File folder = new File(Preferences.STORE.getString(IPreferenceConstants.USER_DATA_FOLDER), "espoo-reports"); //$NON-NLS-1$
-        folder.mkdirs();
-        return folder;
+    	return new File(ArchiPlugin.INSTANCE.getUserDataFolder(), "espoo-reports");
     }
 
     /**
