@@ -10,10 +10,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -31,7 +27,6 @@ import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.widgets.DirectoryDialog;
@@ -45,6 +40,7 @@ import org.stringtemplate.v4.STGroupFile;
 import org.stringtemplate.v4.StringRenderer;
 
 import com.archimatetool.editor.ArchiPlugin;
+import com.archimatetool.editor.browser.BrowserEditor;
 import com.archimatetool.editor.browser.BrowserEditorInput;
 import com.archimatetool.editor.browser.IBrowserEditor;
 import com.archimatetool.editor.diagram.util.DiagramUtils;
@@ -52,7 +48,6 @@ import com.archimatetool.editor.diagram.util.ModelReferencedImage;
 import com.archimatetool.editor.ui.ImageFactory;
 import com.archimatetool.editor.ui.services.EditorManager;
 import com.archimatetool.editor.utils.FileUtils;
-import com.archimatetool.editor.utils.PlatformUtils;
 import com.archimatetool.editor.utils.StringUtils;
 import com.archimatetool.model.FolderType;
 import com.archimatetool.model.IArchimateConcept;
@@ -80,7 +75,7 @@ import fi.espoo.archimatetool.reports.EspooHtmlReportsPlugin;
  */
 public class HTMLReportExporter {
     
-    public static File PREVIEW_FOLDER = new File(ArchiPlugin.INSTANCE.getUserDataFolder(), "html-report-preview"); //$NON-NLS-1$
+    public static File PREVIEW_FOLDER = new File(ArchiPlugin.INSTANCE.getWorkspaceFolder(), "html-report-preview"); //$NON-NLS-1$
     
     static final String PREFS_LAST_FOLDER = "Reports_LastFolder"; //$NON-NLS-1$
     
@@ -123,17 +118,12 @@ public class HTMLReportExporter {
         }
         
         Exception[] exception = new Exception[1];
+        File[] file = new File[1];
         
         // Since this can take a while, show the busy dialog
         IRunnableWithProgress runnable = monitor -> {
             try {
-                File file = createReport(targetFolder, "index.html", monitor); //$NON-NLS-1$
-                
-                // Open it in external Browser
-                IWorkbenchBrowserSupport support = PlatformUI.getWorkbench().getBrowserSupport();
-                IWebBrowser browser = support.getExternalBrowser();
-                // This method supports network URLs
-                browser.openURL(new URL("file", null, file.getAbsolutePath().replace(" ", "%20"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                file[0] = createReport(targetFolder, "index.html", monitor); //$NON-NLS-1$
             }
             catch(Exception ex) { // Catch OOM and SWT exceptions
                 exception[0] = ex;
@@ -142,7 +132,7 @@ public class HTMLReportExporter {
         
         try {
             ProgressMonitorDialog dialog = new ProgressMonitorDialog(Display.getCurrent().getActiveShell());
-            dialog.run(false, true, runnable);
+            dialog.run(false, true, runnable); // Set fork to false because of threading issues on Linux
         }
         catch(Exception ex) {
             exception[0] = ex;
@@ -150,28 +140,29 @@ public class HTMLReportExporter {
 
         if(exception[0] instanceof CancelledException) {
             MessageDialog.openInformation(Display.getCurrent().getActiveShell(), Messages.HTMLReportExporter_2, exception[0].getMessage());
+            return;
         }
         else if(exception[0] != null) {
             throw exception[0];
         }
+        
+        // Open it in external Browser
+        IWorkbenchBrowserSupport support = PlatformUI.getWorkbench().getBrowserSupport();
+        IWebBrowser browser = support.getExternalBrowser();
+        // This method supports network URLs
+        browser.openURL(new URL("file", null, file[0].getAbsolutePath().replace(" ", "%20"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
     
     public void preview() throws Exception {
         PREVIEW_FOLDER.mkdirs();
         
         Exception[] exception = new Exception[1];
+        File[] file = new File[1];
         
         // Since this can take a while, show the busy dialog
         IRunnableWithProgress runnable = monitor -> {
             try {
-                File file = createReport(PREVIEW_FOLDER, "preview-" + fModel.getId() + ".html", monitor);  //$NON-NLS-1$//$NON-NLS-2$
-                
-                // Open it in internal Browser
-                BrowserEditorInput input = new BrowserEditorInput(file.getPath(), Messages.HTMLReportExporter_0 + " " + fModel.getName()); //$NON-NLS-1$
-                IBrowserEditor editor = (IBrowserEditor)EditorManager.openEditor(input, IBrowserEditor.ID);
-                if(editor != null && editor.getBrowser() != null) {
-                    editor.getBrowser().refresh();
-                }
+                file[0] = createReport(PREVIEW_FOLDER, "preview-" + fModel.getId() + ".html", monitor);  //$NON-NLS-1$//$NON-NLS-2$
             }
             catch(Exception ex) {  // Catch OOM and SWT exceptions
                 exception[0] = ex;
@@ -180,7 +171,7 @@ public class HTMLReportExporter {
         
         try {
             ProgressMonitorDialog dialog = new ProgressMonitorDialog(Display.getCurrent().getActiveShell());
-            dialog.run(false, true, runnable);
+            dialog.run(false, true, runnable); // Set fork to false because of threading issues on Linux
         }
         catch(Exception ex) {
             exception[0] = ex;
@@ -188,9 +179,17 @@ public class HTMLReportExporter {
 
         if(exception[0] instanceof CancelledException) {
             MessageDialog.openInformation(Display.getCurrent().getActiveShell(), Messages.HTMLReportExporter_2, exception[0].getMessage());
+            return;
         }
         else if(exception[0] != null) {
             throw exception[0];
+        }
+        
+        // Open it in internal Browser
+        BrowserEditorInput input = new BrowserEditorInput("file:///" + file[0].getPath(), Messages.HTMLReportExporter_0 + " " + fModel.getName()); //$NON-NLS-1$
+        IBrowserEditor editor = (IBrowserEditor)EditorManager.openEditor(input, IBrowserEditor.ID);
+        if(editor != null && editor.getBrowser() != null) {
+            editor.getBrowser().refresh();
         }
     }
     
@@ -211,7 +210,7 @@ public class HTMLReportExporter {
         // Copy hints files from the help plug-in
         copyHintsFiles(targetFolder);
         
-        setProgressSubTask(Messages.HTMLReportExporter_11, true);
+        setProgressSubTask(Messages.HTMLReportExporter_11);
         
         // Create sub-folders
         File elementsFolder = new File(targetFolder, fModel.getId() + "/elements"); //$NON-NLS-1$
@@ -248,7 +247,7 @@ public class HTMLReportExporter {
         // Write Diagrams and images
         writeDiagrams(imagesFolder, viewsFolder, stFrame);
         
-        setProgressSubTask(Messages.HTMLReportExporter_13, true);
+        setProgressSubTask(Messages.HTMLReportExporter_13);
                
         // Write root model.html frame
         ST stModel = groupFile.getInstanceOf("modelreport"); //$NON-NLS-1$
@@ -276,7 +275,7 @@ public class HTMLReportExporter {
      * @throws IOException 
      */
     private void copyHTMLSkeleton(File targetFolder) throws IOException {
-        setProgressSubTask(Messages.HTMLReportExporter_9, true);
+        setProgressSubTask(Messages.HTMLReportExporter_9);
         
         File srcDir = new File(EspooHtmlReportsPlugin.INSTANCE.getTemplatesFolder(), "html"); //$NON-NLS-1$
         FileUtils.copyFolder(srcDir, targetFolder);
@@ -287,7 +286,7 @@ public class HTMLReportExporter {
      * @throws IOException 
      */
     private void copyHintsFiles(File targetFolder) throws IOException {
-        setProgressSubTask(Messages.HTMLReportExporter_10, true);
+        setProgressSubTask(Messages.HTMLReportExporter_10);
         
         // Main hints
         Bundle bundle = Platform.getBundle("com.archimatetool.help"); //$NON-NLS-1$
@@ -345,7 +344,7 @@ public class HTMLReportExporter {
             writer.write(stFrame.render());
         }
 
-        updateProgress();
+        checkProgressCancelled();
     }
     
     private void writeHaku(File hakuFile, ST stHaku, EObject component) throws IOException {
@@ -360,7 +359,7 @@ public class HTMLReportExporter {
             writer.write(stHaku.render());
         }
 
-        updateProgress();
+        checkProgressCancelled();
     }
 
     /**
@@ -391,7 +390,7 @@ public class HTMLReportExporter {
         // Save images
         saveImages(imagesFolder, diagramModels);
         
-        setProgressSubTask(Messages.HTMLReportExporter_11, true);
+        setProgressSubTask(Messages.HTMLReportExporter_11);
 
         // Create html files
         for(IDiagramModel dm : diagramModels) {
@@ -436,7 +435,7 @@ public class HTMLReportExporter {
                 writer.write(stFrame.render());
             }
             
-            updateProgress();
+            checkProgressCancelled();
         }
     }
     
@@ -454,13 +453,12 @@ public class HTMLReportExporter {
         int i = 1;
         
         for(IDiagramModel dm : diagramModels) {
-            setProgressSubTask(NLS.bind(Messages.HTMLReportExporter_4, i++, total), true);
+            setProgressSubTask(NLS.bind(Messages.HTMLReportExporter_4, i++, total));
 
-            Image image = null;
+            ModelReferencedImage geoImage = null;
             
             try {
-                ModelReferencedImage geoImage = DiagramUtils.createModelReferencedImage(dm, 1, 10);
-                image = geoImage.getImage();
+                geoImage = DiagramUtils.createModelReferencedImage(dm, 1, 10);
 
                 // Generate file name
                 String diagramName = dm.getId();
@@ -488,7 +486,7 @@ public class HTMLReportExporter {
                 diagramBoundsMap.put(dm, bounds);
 
                 ImageLoader loader = new ImageLoader();
-                loader.data = new ImageData[] { image.getImageData(ImageFactory.getImageDeviceZoom()) };
+                loader.data = new ImageData[] { geoImage.getImage().getImageData(ImageFactory.getImageDeviceZoom()) };
                 File file = new File(imagesFolder, diagramName);
                 loader.save(file.getAbsolutePath(), SWT.IMAGE_PNG);
             }
@@ -497,16 +495,18 @@ public class HTMLReportExporter {
                         (t.getMessage() == null ? t.toString() : t.getMessage()), t);
             }
             finally {
-                if(image != null) {
-                    image.dispose();
+                if(geoImage != null && geoImage.getImage() != null) {
+                    geoImage.getImage().dispose();
                 }
             }
         }
     }
     
-    private void updateProgress() throws CancelledException {
-        if(progressMonitor != null && PlatformUI.isWorkbenchRunning() && Display.getCurrent() != null) {
-            while(Display.getCurrent().readAndDispatch());
+    private void checkProgressCancelled() throws CancelledException {
+        if(progressMonitor != null) {
+        	if (PlatformUI.isWorkbenchRunning() && Display.getCurrent() != null) {
+        		while(Display.getCurrent().readAndDispatch());
+        	}
             
             if(progressMonitor.isCanceled()) {
                 throw new CancelledException(Messages.HTMLReportExporter_14);
@@ -514,12 +514,10 @@ public class HTMLReportExporter {
         }
     }
     
-    private void setProgressSubTask(String task, boolean doUpdate) throws CancelledException {
+    private void setProgressSubTask(String task) throws CancelledException {
         if(progressMonitor != null) {
             progressMonitor.subTask(task);
-            if(doUpdate) {
-                updateProgress();
-            }
+            checkProgressCancelled();
         }
     }
 
@@ -556,12 +554,6 @@ public class HTMLReportExporter {
         }
         
         store.setValue(PREFS_LAST_FOLDER, folder.getAbsolutePath());
-        
-        // TODO: Bug on Mac 10.12 and newer - Open dialog does not close straight away
-        // See https://bugs.eclipse.org/bugs/show_bug.cgi?id=527306
-        if(PlatformUtils.isMac()) {
-            while(Display.getCurrent().readAndDispatch());
-        }
         
         return folder;
     }

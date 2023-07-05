@@ -98,7 +98,7 @@ implements IWorkbenchPreferencePage, IEspooPreferenceConstants {
     }
 
     private void setValues() {
-        fUserReportsFolderTextField.setText(EspooHtmlReportsPlugin.INSTANCE.getUserTemplatesFolder().getAbsolutePath());
+        fUserReportsFolderTextField.setText(getPreferenceStore().getString(ESPOO_USER_REPORTS_FOLDER));
     }
     
     @Override
