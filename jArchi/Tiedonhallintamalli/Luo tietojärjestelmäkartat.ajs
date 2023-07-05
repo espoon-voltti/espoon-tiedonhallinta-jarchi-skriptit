@@ -53,8 +53,8 @@ var jarjestelmat = $("application-component").filter(fth);
 jarjestelmat.sort(namecompare);
 jarjestelmat.each(function (jarj) {
   var jarjcoll = $("#" + jarj.id);
-  jarj.prop("_Prosesseja", jarjcoll.outRels("serving-relationship").targetEnds("business-process").filter(fth).size());
-  jarj.prop("_Liittymiä", jarjcoll.rels("flow-relationship").filter(fth).targetEnds("application-component").size());
+  jarj.prop("_Prosesseja", String(jarjcoll.outRels("serving-relationship").targetEnds("business-process").filter(fth).size()));
+  jarj.prop("_Liittymiä", String(jarjcoll.rels("flow-relationship").filter(fth).targetEnds("application-component").size()));
   if (jarjcoll.outRels("composition-relationship").targetEnds("application-component").filter(fth).size() > 0) { //filter(fth).filter(function (j) { return true; /*j.id != jarj.id; */}).size() > 0) {
     //console.log("Pääjärjestelmä " + jarj);
     jarj.prop("_PääAliJärj", "P");

@@ -272,7 +272,7 @@ if (filePath) {
     for (var poistunutId in jarjMap) {  // Jäljellä vain salkussa olleet joita ei enää näy!
       var poistunutJarj = jarjMap[poistunutId];
       console.log("JÄRJESTELMÄ " + poistunutJarj.name + " POISTUNUT JÄRJESTELMÄSALKUSTA, SIIRRETÄÄN POISTUNEISIIN");
-      poistunutJarj.prop("Järjestelmäsalkku ID", -poistunutId); // alussa laitettiin jarjMapiin vain ne joiden id > 0
+      poistunutJarj.prop("Järjestelmäsalkku ID", String(-poistunutId)); // alussa laitettiin jarjMapiin vain ne joiden id > 0
       poistunutJarj.name = poistunutJarj.name + " (POISTUNUT JÄRJESTELMÄSALKUSTA)";
       poistunutJarj.prop("_Päivitetty", aikaleima);
       poistunutJarj.prop("_Poistuneeksi merkitty", aikaleima);
