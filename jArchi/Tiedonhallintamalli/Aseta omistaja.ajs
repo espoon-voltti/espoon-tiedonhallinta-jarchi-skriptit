@@ -49,6 +49,7 @@ if (kohdeOmistaja) {
     });
     model.createRelationship("association-relationship", "vastaa", kohdeOmistaja, element);
     console.log("+ lisättiin kohteelle " + element + " omistajaksi " + kohdeOmistaja);
+    muuttunutMerkinta(element, null);
   });
 }
 

@@ -42,7 +42,11 @@ $(selection).each(function (elem) {
     kohteet.push(elem);
     return;
   }
-  console.error("Valittu kohde ei ole prosessi, tietovaranto tai tietojärjestelmä tai näiden välinen yhteys: " + elem + ", ei voida jatkaa.");
+  if (elem.type == "business-function") {
+    kohteet.push(elem);
+    return;
+  }
+  console.error("Valittu kohde ei ole prosessi, tietovaranto, tietojärjestelmä tai tehtäväluokka tai näiden välinen yhteys: " + elem + ", ei voida jatkaa.");
   exit();
 });
 

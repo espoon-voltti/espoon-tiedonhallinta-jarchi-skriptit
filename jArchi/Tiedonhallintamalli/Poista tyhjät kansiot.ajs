@@ -17,19 +17,47 @@ function kasitteleKansio(kansio) {
 }
 
 console.show();
-console.log("> Poistetaan valittujen kansioiden tyhjiä alikansioita...");
+console.log("> Poistetaan tyhjiä alikansioita...");
+
+var kansioita = 0;
+var muita = 0;
 
 $(selection).each(function (elem) {
-  if (elem.type != 'folder') {
-    console.error("Valittuna voi olla vain kansioita. " + elem + " ei ole kansio.");
-    exit();
+  if (elem.type == 'folder') {
+    kansioita++;
+  } else {
+    muita++;
   }
 });
+if (kansioita && muita) {
+  console.error("Jos valittuna on kansioita, valittuna ei voi olla samaan aikaan muun tyyppisiä kohteita.");
+  exit();
+}
 
-$(selection).each(function (elem) {
-  kasitteleKansio(elem);
-});
+if (kansioita) {
+  $(selection).each(function (elem) {
+    kasitteleKansio(elem);
+  });
+} else {
+  var businessFolder = $("folder.Business").first();
+  var tiedonhallintamalliFolder = $("#" + businessFolder.id).find("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalliFolder) {
+    console.log("> Käydään läpi Business > Tiedonhallintamalli")
+    kasitteleKansio(tiedonhallintamalliFolder);
+  }
+  var applicationFolder = $("folder.Application").first();
+  tiedonhallintamalliFolder = $("#" + applicationFolder.id).find("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalliFolder) {
+    console.log("> Käydään läpi Application > Tiedonhallintamalli")
+    kasitteleKansio(tiedonhallintamalliFolder);
+  }
+  var viewsFolder = $("folder.Views").first();
+  tiedonhallintamalliFolder = $("#" + viewsFolder.id).find("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalliFolder) {
+    console.log("> Käydään läpi Views > Tiedonhallintamalli")
+    kasitteleKansio(tiedonhallintamalliFolder);
+  }
+}
 
 console.log("> Valmis");
 console.log();
-

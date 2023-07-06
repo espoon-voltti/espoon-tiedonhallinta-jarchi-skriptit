@@ -62,7 +62,7 @@ $(selection).each(function (elem) {
 var laskuri = 0;
 
 if (tietosuojaselosteet.length) {
-  if (prosessit.length || tietojarjestelmat.length || !tietovarannot.length) {
+  if (prosessit.length || tietojarjestelmat.length || tehtavaluokat.length || !tietovarannot.length) {
     console.error("Tietosuojaselosteita voi liittää vain tietovarantoihin, ei voida jatkaa");
     exit();
   }
@@ -84,63 +84,62 @@ if (tietosuojaselosteet.length) {
 }
 
 if (tehtavaluokat.length) {
+  var jatka = true;
   if (prosessit.length && tietovarannot.length) {
-    if (!window.confirm("Kytketäänkö tehtäväluokka(/-at) [" + tehtavaluokat + "] prosesseihin [" + prosessit + "] ja tietovarantoihin [" + tietovarannot + "]?")) {
-      console.log("Älä valitse tehtäväluokkia jos et halua kytkeä niitä... lopetetaan.");
-      exit();
-    }
+    jatka = window.confirm("Kytketäänkö tehtäväluokka(/-at) [" + tehtavaluokat + "] prosesseihin [" + prosessit + "] ja tietovarantoihin [" + tietovarannot + "]?"));
   }
-  for (var i = 0; i < tehtavaluokat.length; i++) {
-    for (var j = 0; j < prosessit.length; j++) {
-      if (onYhteys(tehtavaluokat[i], prosessit[j])) {
-        console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + prosessit[j]);
-      } else {
-        console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " prosessiin " + prosessit[j]);
-        model.createRelationship("serving-relationship", "", prosessit[j], tehtavaluokat[i]);
-        muuttunutMerkinta(tehtavaluokat[i], prosessit[j], aikaleima);
-        laskuri++;
+  if (jatka) {
+    for (var i = 0; i < tehtavaluokat.length; i++) {
+      for (var j = 0; j < prosessit.length; j++) {
+        if (onYhteys(tehtavaluokat[i], prosessit[j])) {
+          console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + prosessit[j]);
+        } else {
+          console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " prosessiin " + prosessit[j]);
+          model.createRelationship("serving-relationship", "", prosessit[j], tehtavaluokat[i]);
+          muuttunutMerkinta(tehtavaluokat[i], prosessit[j], aikaleima);
+          laskuri++;
+        }
+      }
+      for (var j = 0; j < tietovarannot.length; j++) {
+        if (onYhteys(tehtavaluokat[i], tietovarannot[j])) {
+          console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + tietovarannot[j]);
+        } else {
+          console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " tietovarantoon " + tietovarannot[j]);
+          model.createRelationship("serving-relationship", "", tietovarannot[j], tehtavaluokat[i]);
+          muuttunutMerkinta(tietovarannot[j], tehtavaluokat[i], aikaleima);
+          laskuri++;
+        }
       }
     }
-    for (var j = 0; j < tietovarannot.length; j++) {
-      if (onYhteys(tehtavaluokat[i], tietovarannot[j])) {
-        console.error("- YHTEYS ON JO OLEMASSA: " + tehtavaluokat[i] + " / " + tietovarannot[j]);
-      } else {
-        console.log("- Luodaan yhteys tehtäväluokalta " + tehtavaluokat[i] + " tietovarantoon " + tietovarannot[j]);
-        model.createRelationship("serving-relationship", "", tietovarannot[j], tehtavaluokat[i]);
-        muuttunutMerkinta(tietovarannot[j], tehtavaluokat[i], aikaleima);
-        laskuri++;
-      }
-    }
   }
-
 }
 
 if (prosessit.length) {
+  var jatka = true;
   if (tietovarannot.length && tietojarjestelmat.length) {
-    if (!window.confirm("Kytketäänkö prosessi(t) [" + prosessit + "] tietovarantoihin [" + tietovarannot + "] ja tietojärjestelmiin [" + tietojarjestelmat + "]?")) {
-      console.log("Älä valitse prosesseja jos et halua kytkeä niitä... lopetetaan.");
-      exit();
-    }
+    jatka = window.confirm("Kytketäänkö prosessi(t) [" + prosessit + "] tietovarantoihin [" + tietovarannot + "] ja tietojärjestelmiin [" + tietojarjestelmat + "]?"));
   }
-  for (var i = 0; i < prosessit.length; i++) {
-    for (var j = 0; j < tietovarannot.length; j++) {
-      if (onYhteys(prosessit[i], tietovarannot[j])) {
-        console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietovarannot[j]);
-      } else {
-        console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietovarantoon " + tietovarannot[j]);
-        model.createRelationship("serving-relationship", "", tietovarannot[j], prosessit[i]);
-        muuttunutMerkinta(tietovarannot[j], prosessit[i], aikaleima);
-        laskuri++;
+  if (jatka) {
+    for (var i = 0; i < prosessit.length; i++) {
+      for (var j = 0; j < tietovarannot.length; j++) {
+        if (onYhteys(prosessit[i], tietovarannot[j])) {
+          console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietovarannot[j]);
+        } else {
+          console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietovarantoon " + tietovarannot[j]);
+          model.createRelationship("serving-relationship", "", tietovarannot[j], prosessit[i]);
+          muuttunutMerkinta(tietovarannot[j], prosessit[i], aikaleima);
+          laskuri++;
+        }
       }
-    }
-    for (var j = 0; j < tietojarjestelmat.length; j++) {
-      if (onYhteys(prosessit[i], tietojarjestelmat[j])) {
-        console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietojarjestelmat[j]);
-      } else {
-        console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietojärjestelmään " + tietojarjestelmat[j]);
-        model.createRelationship("serving-relationship", "", tietojarjestelmat[j], prosessit[i]);
-        muuttunutMerkinta(tietojarjestelmat[j], prosessit[i], aikaleima);
-        laskuri++;
+      for (var j = 0; j < tietojarjestelmat.length; j++) {
+        if (onYhteys(prosessit[i], tietojarjestelmat[j])) {
+          console.error("- YHTEYS ON JO OLEMASSA: " + prosessit[i] + " / " + tietojarjestelmat[j]);
+        } else {
+          console.log("- Luodaan yhteys prosessista " + prosessit[i] + " tietojärjestelmään " + tietojarjestelmat[j]);
+          model.createRelationship("serving-relationship", "", tietojarjestelmat[j], prosessit[i]);
+          muuttunutMerkinta(tietojarjestelmat[j], prosessit[i], aikaleima);
+          laskuri++;
+        }
       }
     }
   }

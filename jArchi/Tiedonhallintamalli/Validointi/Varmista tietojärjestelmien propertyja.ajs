@@ -11,16 +11,14 @@ console.log("> Varmistetaan tietojärjestelmien propertyja");
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 
 //var tulostettavat = ["_Vastuuhenkilö", "_Yhteyshenkilö", "Virallinen", "Yhteyshenkilö", "_Lisätieto", "_VanhaNimi", "_Uudet tiedot"];
-var tulostettavat = ["_JärjestelmäsalkunVapaateksti"];
-var poistettavat = ["Avointen rajapintojen kuvaus", ];
+var tulostettavat = ["Asiakirjajulkisuuskuvaus", "_Ei_katselmoida"];  // "_JärjestelmäsalkunVapaateksti", 
+var poistettavat = ["Avointen rajapintojen kuvaus", "Vastaava viranhaltija", "Järjestelmän omistaja(vastaava viranhaltija)"];
 var uudelleennimettavat = {
   "_Omistaja": "Omistaja",
   "Kuvaileva nimi": "Julkinen nimi",
   "Kuvailevaksi nimeksi": "Julkinen nimi",
-  "Vastaava viranhaltija": "Järjestelmän omistaja",
-  "Järjestelmän omistaja (vastaava viranhaltija)": "Järjestelmän omistaja"
 };
-var varmistettavat = [];
+var varmistettavat = ["Järjestelmän omistaja", "Toimialan vastuuhenkilö", "Julkinen nimi", "Hakutekijät", "Tietoaineistot"];
 
 var liittyma_tulostettavat = ["_ArchissaLisätty"];
 var liittyma_poistettavat = ["Kriittisyys"];
@@ -48,7 +46,7 @@ $("application-component").filter(fth).each(function (jarj) {
   }
 
   for (var i = 0; i < varmistettavat.length; i++) {
-    if (jarj.prop(varmistettavat[i]) === undefined) {
+    if (jarj.prop().indexOf(varmistettavat[i]) < 0) {
       console.log("- Lisätään property " + varmistettavat[i] + " järjestelmälle " + jarj);
       jarj.prop(varmistettavat[i], "");
     }
