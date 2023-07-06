@@ -12,6 +12,14 @@ load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
 console.log("> Loaded Papa Parse");
 
+var viemyoskentat = [
+  "Koskee asianhallintaa",
+  "Prosessissa syntyvä lopputuotos",
+  "Saa syötteitä",
+  "Tuottaa syötteitä",
+  "Omistuksen lisätieto"
+];
+
 function kasitteleProsessit(_prosessit, _taso, _tulostusfunktio) {
   _prosessit.each(function (_pros) {
     _tulostusfunktio(_pros, _taso);
@@ -44,12 +52,31 @@ prosessit.sort(tunnistecompare);
 kasitteleProsessit(prosessit, 1, function (pros, taso) {
   console.log(pros.name);
   var datarow = {};
+  var toimiala = "Muut";
+  var omistaja = $("#" + pros.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").filter(fth).first();
+  if (omistaja) {
+    if (omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") toimiala = "Ulkoinen";
+    else if (omistaja.prop("Toimiala")) toimiala = omistaja.prop("Toimiala");
+  }
+  datarow["Toimiala"] = toimiala;
+  datarow["Omistaja"] = omistaja.name;
   datarow["Prosessin nimi"] = pros.name;
+  for (var i = 0; i < viemyoskentat.length; i++) {
+    datarow[viemyoskentat[i]] = pros.prop(viemyoskentat[i]);
+  }
   csvData.push(datarow);
   delete prosessimap[pros.id];
 });
 
-var csvHeaders = ["Prosessin nimi"];
+var csvHeaders = [
+  "Toimiala",
+  "Omistaja",
+  "Prosessin nimi"
+];
+for (var i = 0; i < viemyoskentat.length; i++) {
+  csvHeaders.push(viemyoskentat[i]);
+}
+
 var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
 $.fs.writeFile(exportFile, theCSV);
 

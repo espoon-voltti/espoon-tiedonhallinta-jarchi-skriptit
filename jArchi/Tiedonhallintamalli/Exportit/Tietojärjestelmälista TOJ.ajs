@@ -1,0 +1,45 @@
+﻿/*
+ * Itse määritellyn formaatin mukaisen CSV-tiedoston tuottaminen Archista. Tuottaa listauksen 
+ * tietojärjestelmistä ja niiden tietovarannoista sekä muutamasta muusta kentästä hyödyntäen
+ * Papa Parse kirjastoa.
+ */
+
+"use strict";
+console.show(); 
+console.log("> Tuotetaan listaus tietojärjestelmistä TOJ:ia varten...");
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "tietojäjestelmälista.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+var csvData = [];
+var maxVarannot = 0;
+var jarjestelmat = $("application-component").filter(fth);
+jarjestelmat.sort(namecompare);
+jarjestelmat.each(function (jarj) {
+  if (jarj.prop("Virallinen") == "F") return; // ei listata selvitettäviä
+  if (jarj.prop("_JärjestelmäsalkunVapaateksti") == "1") return; // ei salkun liittymien vapaatekstejä
+  if (jarj.prop("Järjestelmäsalkku ID") <= 0) return;
+  if (jarj.prop("Elinkaaren vaihe") == "Poistettu") return;
+  var datarow = {};
+  var nimi = (jarj.prop("Julkinen nimi") && jarj.name != jarj.prop("Julkinen nimi") ? jarj.name + "-" + jarj.prop("Julkinen nimi") : jarj.name);
+  datarow["Tietojärjestelmä"] = nimi + " (" + jarj.prop("Järjestelmäsalkku ID") + ")";
+  console.log(datarow["Tietojärjestelmä"]);
+  csvData.push(datarow);
+});
+
+var csvHeaders = ["Tietojärjestelmä"];
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> Valmis");
+console.log();
