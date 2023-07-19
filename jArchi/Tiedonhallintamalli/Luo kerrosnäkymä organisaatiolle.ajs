@@ -1,0 +1,367 @@
+﻿/*
+ * Luo 360-näkymän Espoon tiedonhallintamalliin valituille prosesseille. Kutsutaan ~lib/LuoNäkymäProsessille.ajs:n funktiota.
+ */
+
+"use strict";
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+
+var sarakkeidenvalix = kuvionleveys;
+var maxvaliy = kuvionkorkeus + 2 * kuviovaliy;
+
+function max(arr) {
+  if (!arr.length) return null;
+  var max = arr[0];
+  for (var i = 1; i < arr.length; i++) {
+    if (arr[i] > max) max = arr[i];
+  }
+  return max;
+}
+
+function laskemaxkorkeus(maxmaara) {
+  return maxmaara * kuvionkorkeus + (maxmaara - 1) * kuviovaliy;
+}
+
+function laskevalit(lista, maxkorkeus) {
+  var valit = {};
+  valit.reunus = 0;
+  valit.valiy = Math.floor((maxkorkeus - (lista.length * kuvionkorkeus)) / (lista.length - 1));
+  if (valit.valiy > maxvaliy) {
+    valit.valiy = maxvaliy;
+    valit.reunus = Math.floor((maxkorkeus - lista.length * kuvionkorkeus - (lista.length - 1) * maxvaliy) / 2);
+  }
+  return valit;
+}
+
+function luoKerrosnakymaOrganisaatiolle(org) {
+
+  console.log("> Luodaan kerrosnäkymää organisaatiolle " + org);
+
+  var omatProsessitMap = {};
+  var omatProsessitList = [];
+  var omatJarjestelmatMap = {};
+  var omatJarjestelmatList = [];
+
+  $("#" + org.id).outRels("association-relationship.vastaa").targetEnds().filter(fth).each(function (elem) {
+    if (elem.type == "business-process") {
+      omatProsessitMap[elem.id] = elem;
+      omatProsessitList.push(elem);
+    } else if (elem.type == "application-component") {
+      omatJarjestelmatMap[elem.id] = elem;
+      omatJarjestelmatList.push(elem);
+    }
+  });
+
+  var omienJarjestelmienTietovarannotMap = {};
+  var omienJarjestelmienTietovarannotList = [];
+
+  for (var i = 0; i < omatJarjestelmatList.length; i++) {
+    $("#" + omatJarjestelmatList[i].id).outRels("serving-relationship").targetEnds("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tv) {
+      if (!(tv.id in omienJarjestelmienTietovarannotMap)) {
+        omienJarjestelmienTietovarannotMap[tv.id] = tv;
+        omienJarjestelmienTietovarannotList.push(tv);
+      }
+    });
+  }
+
+  var muidenJarjestelmatMap = {};
+  var muidenJarjestelmatList = [];
+  var muidenJarjestelmienTietovarannotMap = {};
+  var muidenJarjestelmienTietovarannotList = [];
+  for (var i = 0; i < omatProsessitList.length; i++) {
+    $("#"+omatProsessitList[i].id).inRels("serving-relationship").sourceEnds("application-component").filter(fth).each(function (jarj) {
+      if (!(jarj.id in omatJarjestelmatMap) && !(jarj.id in muidenJarjestelmatMap)) {
+        muidenJarjestelmatMap[jarj.id] = jarj;
+        muidenJarjestelmatList.push(jarj);
+        $("#"+jarj.id).outRels("serving-relationship").targetEnds("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (tv) {
+          if (!(tv.id in muidenJarjestelmienTietovarannotMap)) {
+            muidenJarjestelmienTietovarannotMap[tv.id] = tv;
+            muidenJarjestelmienTietovarannotList.push(tv);
+          } 
+        });
+      }
+    });
+  }
+
+  var muutTietovarannotMap = {};
+  var muutTietovarannotList = [];
+  var muidenJarjKaytetytTietovarannotMap = {};
+  var muidenJarjKaytetytTietovarannotList = [];
+  for (var i = 0; i < omatProsessitList.length; i++) {
+    $("#"+omatProsessitList[i].id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tv) {
+      if (!(tv.id in omienJarjestelmienTietovarannotMap)) {
+        if (tv.id in muidenJarjestelmienTietovarannotMap) {
+          if (!(tv.id in muidenJarjKaytetytTietovarannotMap)) {
+            muidenJarjKaytetytTietovarannotMap[tv.id] = tv;
+            muidenJarjKaytetytTietovarannotList.push(tv);
+          }
+        } else if (!(tv.id in muutTietovarannotMap)) {
+          muutTietovarannotMap[tv.id] = tv;
+          muutTietovarannotList.push(tv);
+        }
+      }
+    });
+  }
+
+  omienJarjestelmienTietovarannotList.sort(namecompare);
+  omatJarjestelmatList.sort(namecompare);
+  omatProsessitList.sort(tunnistecompare);
+  muidenJarjKaytetytTietovarannotList.sort(namecompare);
+  muidenJarjestelmatList.sort(namecompare);
+  muutTietovarannotList.sort(namecompare);
+
+  var muidenJarjestelmatJaMuutTietovarannotList = muidenJarjKaytetytTietovarannotList.concat(muidenJarjestelmatList, muutTietovarannotList);
+
+  var views = $("folder.Views").first();
+  var tiedonhallintamalli = $("#" + views.id).children("folder.Tiedonhallintamalli").first();
+  if (tiedonhallintamalli == null) {
+    tiedonhallintamalli = views.createFolder("Tiedonhallintamalli");
+  }
+  var kerrosnakymat = $("#" + tiedonhallintamalli.id).children("folder.Kerrosnäkymät").first();
+  if (kerrosnakymat == null) {
+    kerrosnakymat = tiedonhallintamalli.createFolder("Kerrosnäkymät");
+  }
+
+  var maxmaara = max([
+    omienJarjestelmienTietovarannotList.length,
+    omatJarjestelmatList.length,
+    omatProsessitList.length,
+    muidenJarjestelmatJaMuutTietovarannotList.length]);
+  var maxkorkeus = laskemaxkorkeus(maxmaara);
+  var juoksevax = reunusx;
+  var nakymanNimi = "Kerrosnäkymä " + org.name;
+
+  var onjo = $("view").filter(function (view) { return view.prop("_KuvattavaKohde") == org.id; });
+  onjo = onjo.add($("#" + views.id).children("view." + nakymanNimi).not(onjo));
+  var viewObj = createOrRecycleArchimateView(onjo, nakymanNimi, kerrosnakymat, true);
+  var nakyma = viewObj.view;
+  nakyma.prop("_KuvattavaKohde", org.id);
+  nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+  nakyma.prop("_Tiedonhallintamalli", "1");
+  nakyma.documentation = "";
+  org.prop("_OmaNäkymä", nakyma.id);
+
+  var objektit = {};
+
+  var valit = laskevalit(omienJarjestelmienTietovarannotList, maxkorkeus);
+  var juoksevay = reunusy + valit.reunus;
+  for (var i = 0; i < omienJarjestelmienTietovarannotList.length; i++) {
+    objektit[omienJarjestelmienTietovarannotList[i].id] =
+      recycledViewAddElement(viewObj, omienJarjestelmienTietovarannotList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+  }
+
+  juoksevax = juoksevax + kuvionleveys + sarakkeidenvalix;
+  valit = laskevalit(omatJarjestelmatList, maxkorkeus);
+  juoksevay = reunusy + valit.reunus;
+  for (var i = 0; i < omatJarjestelmatList.length; i++) {
+    objektit[omatJarjestelmatList[i].id] =
+      recycledViewAddElement(viewObj, omatJarjestelmatList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+  }
+
+  juoksevax = juoksevax + kuvionleveys + sarakkeidenvalix;
+  valit = laskevalit(omatProsessitList, maxkorkeus);
+  juoksevay = reunusy + valit.reunus;
+  for (var i = 0; i < omatProsessitList.length; i++) {
+    objektit[omatProsessitList[i].id] =
+      recycledViewAddElement(viewObj, omatProsessitList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+  }
+
+  juoksevax = juoksevax + kuvionleveys + sarakkeidenvalix;
+  valit = laskevalit(muidenJarjestelmatJaMuutTietovarannotList, maxkorkeus);
+  juoksevay = reunusy + valit.reunus;
+  for (var i = 0; i < muidenJarjestelmatJaMuutTietovarannotList.length; i++) {
+    objektit[muidenJarjestelmatJaMuutTietovarannotList[i].id] =
+      recycledViewAddElement(viewObj, muidenJarjestelmatJaMuutTietovarannotList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+    juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+  }
+
+  // relaatiot
+  
+  for (var i = 0; i < omatProsessitList.length; i++) {
+    $("#" + omatProsessitList[i].id).inRels("serving-relationship").each(function (rel) {
+      if (rel.source.prop("_Tiedonhallintamalli") != "1") return;
+      if (rel.source.type != "application-component" && rel.source.type != "product") return;
+      if (rel.source.type == "product") {
+        if (rel.source.prop("_Tietovaranto") != "1") return;
+        if (rel.source.id in omienJarjestelmienTietovarannotMap) return;
+      }
+      //console.log("Piiretään relaatiota(1) " + kuvaileRelaatio(rel));
+      recycledViewAddRelationship(viewObj, rel, objektit[rel.source.id], objektit[rel.target.id]);
+    });
+  }
+
+  for (var i = 0; i < omatJarjestelmatList.length; i++) {
+    $("#" + omatJarjestelmatList[i].id).outRels("serving-relationship").each(function (rel) {
+      if (rel.target.prop("_Tiedonhallintamalli") != "1") return;
+      if (rel.target.type != "product" || rel.target.prop("_Tietovaranto") != "1") return;
+      //console.log("Piiretään relaatiota(2) " + kuvaileRelaatio(rel));
+      recycledViewAddRelationship(viewObj, rel, objektit[rel.source.id], objektit[rel.target.id]);
+    });
+  }
+
+  //
+  // Järjestelmien käyttö muiden prosesseissa
+  //
+
+  var muidenProsessitMap = {};
+  var muidenProsessitList = [];
+  var muidenProsessienJarjestelmatMap = {};
+  var muidenProsessienJarjestelmatList = [];
+
+  for (var i = 0; i < omatJarjestelmatList.length; i++) {
+    $("#" + omatJarjestelmatList[i].id).outRels("serving-relationship").targetEnds("business-process").filter(fth).each(function (pros) {
+      if (pros.id in omatProsessitMap) return;
+      if (pros.id in muidenProsessitMap) return;
+      muidenProsessitMap[pros.id] = pros;
+      muidenProsessitList.push(pros);
+      if (!(omatJarjestelmatList[i].id in muidenProsessienJarjestelmatMap)) {
+        muidenProsessienJarjestelmatMap[omatJarjestelmatList[i].id] = omatJarjestelmatList[i];
+        muidenProsessienJarjestelmatList.push(omatJarjestelmatList[i]);
+      }
+    });
+  }
+
+  var muidenProsJarjTietovarannotMap = {};
+  var muidenProsJarjTietovarannotList = [];
+  for (var i = 0; i < muidenProsessienJarjestelmatList.length; i++) {
+    $("#" + muidenProsessienJarjestelmatList[i].id).outRels("serving-relationship").targetEnds("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tv) {
+      if (!(tv.id in muidenProsJarjTietovarannotMap)) {
+        muidenProsJarjTietovarannotMap[tv.id] = tv;
+        muidenProsJarjTietovarannotList.push(tv);
+      }
+    });
+  }
+
+  if (muidenProsessitList.length > 0) {
+    muidenProsJarjTietovarannotList.sort(namecompare);
+    muidenProsessienJarjestelmatList.sort(namecompare);
+    muidenProsessitList.sort(tunnistecompare);
+
+    var alkuy2 = reunusy + maxkorkeus + reunusy;  // aiempi maxkorkeus
+    var note = createRecycledObject(viewObj, "muiden-prosessit-note", "diagram-model-note", reunusx, alkuy2, noteleveys, notekorkeus);
+    note.setText("Muiden prosesseissa hyödynnetyt järjestelmät:");
+    alkuy2 = alkuy2 + notekorkeus + reunusy;
+
+    maxmaara = max([
+      muidenProsJarjTietovarannotList.length,
+      muidenProsessienJarjestelmatList.length,
+      muidenProsessitList.length]);
+    maxkorkeus = laskemaxkorkeus(maxmaara);
+
+    juoksevax = reunusx;
+    objektit = {};
+    valit = laskevalit(muidenProsJarjTietovarannotList, maxkorkeus);
+    juoksevay = alkuy2 + valit.reunus;
+    for (var i = 0; i < muidenProsJarjTietovarannotList.length; i++) {
+      objektit[muidenProsJarjTietovarannotList[i].id] =
+        recycledViewAddElement(viewObj, muidenProsJarjTietovarannotList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+      juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+    }
+
+    juoksevax = juoksevax + kuvionleveys + sarakkeidenvalix;
+    valit = laskevalit(muidenProsessienJarjestelmatList, maxkorkeus);
+    juoksevay = alkuy2 + valit.reunus;
+    for (var i = 0; i < muidenProsessienJarjestelmatList.length; i++) {
+      objektit[muidenProsessienJarjestelmatList[i].id] =
+        recycledViewAddElement(viewObj, muidenProsessienJarjestelmatList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+      juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+    }
+
+    juoksevax = juoksevax + kuvionleveys + sarakkeidenvalix;
+    valit = laskevalit(muidenProsessitList, maxkorkeus);
+    var juoksevay = alkuy2 + valit.reunus;
+    for (var i = 0; i < muidenProsessitList.length; i++) {
+      objektit[muidenProsessitList[i].id] =
+        recycledViewAddElement(viewObj, muidenProsessitList[i], juoksevax, juoksevay, kuvionleveys, kuvionkorkeus);
+      juoksevay = juoksevay + kuvionkorkeus + valit.valiy;
+    }
+
+    // muiden prosessien relaatiot
+
+    for (var i = 0; i < muidenProsessienJarjestelmatList.length; i++) {
+      var jarj = muidenProsessienJarjestelmatList[i];
+      $("#" + jarj.id).outRels("serving-relationship").each(function (rel) {
+        if (rel.target.type == "business-process") {
+          if (!(rel.target.id in muidenProsessitMap)) return;
+        } else if (rel.target.type == "product") {
+          if (!(rel.target.id in muidenProsJarjTietovarannotMap)) return;
+        }
+        //console.log("Piiretään relaatiota(4) " + kuvaileRelaatio(rel));
+        recycledViewAddRelationship(viewObj, rel, objektit[jarj.id], objektit[rel.target.id]);
+      });
+    }
+
+  }
+
+  recycledViewFinishRecycling(viewObj);
+  varitaNakyma(nakyma);
+}
+
+
+var aloitus = new Date();
+console.show();
+console.log(">>> Aloitetaan kerrosnäkymien luominen... ");
+
+var valinta = $("empty");
+if ($(selection).size() == 1 && $(selection).first().type == "archimate-model") {
+  // jos valittuna on koko malli, tarkastellaan kaikki sen sisäiset organisaatiot
+  $("business-actor").filter(fth).each(function (org) {
+    if (!org.prop("Sisäinen/ulkoinen") || org.prop("Sisäinen/ulkoinen") != "sisäinen") return;
+    if (org.prop("Toimiala") && (org.prop("Toimiala") == "HYTET" || org.prop("Toimiala" == "LUP"))) return;
+    valinta.add(org);
+  });
+} else {
+  $(selection).each(function (element) {  // explode relevant folder contents
+    if (element.type == "folder") {
+      if ($("#" + element.id).parents().filter(function (fol) { return fol.name == "Views"; }).size() > 0) {
+        valinta.add($("#" + element.id).find("view"));
+      } else {
+        valinta.add($("#" + element.id).find("business-actor").filter(fth));
+      }
+    } else {
+      valinta.add($("#" + element.id));
+    }
+  });
+}
+
+console.log("> Valittuna " + valinta.size() + " kohde(tta).");
+if (valinta.size() > 10) {
+  if (!window.confirm("Olet valinnut " + valinta.size() + " kohdetta, joille luodaan kerrosnäkymät. Haluatko jatkaa?")) {
+    console.log("> Keskeytetty");
+    exit();
+  }
+}
+
+valinta.each(function(element) {
+  element = element.concept ? element.concept : element;  // jos tultiin näkymän kautta, käsitellään varsinaista elementtiä, ei sen näkymäilmentymää
+
+  if (element.type == 'archimate-diagram-model' && element.prop("_KuvattavaKohde")) {
+    // jos valittuna on kaavio, joka kuvaa tiettyä elementtiä, oletetaan käyttäjän tarkoittavan että haluaa luoda näkymän ko. elementille (eli luoda uudelleen ko. kaavion)
+    element = $("#"+element.prop("_KuvattavaKohde")).first();
+  }
+
+  if (element.type != 'business-actor') {
+    console.log("Ohitetaan kohde, joka ei ole organisaatio: " + element);
+    return;
+  }
+
+  if (!fth(element)) {
+    console.log("Ohitetaan kohde, joka ei kuulu tiedonhallintamalliin: " + element);
+    return;
+  }
+
+  luoKerrosnakymaOrganisaatiolle(element);
+});
+
+var lopetus = new Date();
+var kestosek = Math.floor((lopetus - aloitus) / 1000);
+
+console.log("> Valmis (kesto " + Math.floor(kestosek / 60) + " min " + (kestosek % 60) + " s)");
+console.log("<<<");
+console.log("");

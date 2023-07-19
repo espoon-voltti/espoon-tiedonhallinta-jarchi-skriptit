@@ -1,0 +1,151 @@
+﻿/*
+ * Tuottaa kaksi CSV-tiedostoa asiakirjajulkisuuskuvauksen tietojen raportointiin PowerBI:lla.
+ * Ensimmäinen CSV-tiedosto luettelee tietojärjestelmittäin ajk-tiedot. Tietovarannot-sarakkeessa on
+ * järjestelmään liittyvien tietovarantojen nimet puolipisteellä erotettuna.
+ * Toiseen tiedostoon luetellaan tietovarannot kuvauksineen ja vastuutoimialoineen.
+ * Kahden CSV:n välillä on yhdestä-moneen viite-eheys Tietovaranot ja Tietovarannot sarkkeiden välillä.
+ */
+
+"use strict";
+console.show(); 
+console.log("> Tuotetaan asiakirjajulkisuuskuvauksen tiedot CSV-tiedostoksi...");
+
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function julkinennimicompare(left, right) {
+  var jnleft = left.prop("Julkinen nimi");
+  if (!jnleft) jnleft = left.name;
+  var jnright = right.prop("Julkinen nimi");
+  if (!jnright) jnright = right.name;
+  if (!jnleft) return 1; 
+  if (!jnright) return -1;
+  jnleft = jnleft.toUpperCase();
+  jnright = jnright.toUpperCase();
+  if (jnleft > jnright) return 1;
+  if (jnleft < jnright) return -1;
+  return 0;
+}
+
+//var viemyoskentat = ["Järjestelmäsalkku ID", "Avointen rajapintojen kuvaus", "Tietojen saatavuus avoimella rajapinnalla", "Kuvaileva nimi", "Kuvailevaksi nimeksi", "Virallinen", "_JärjestelmäsalkunVapaateksti", "_Lisätieto", "_NimiSalkussa", "_Vastuuhenkilö", "_Yhteyshenkilö", "Yhteyshenkilö"];
+
+var viemyoskentat = ["Tietoaineistot", "Hakutekijät", "Asiarekisteri"];
+
+var exportFile = window.promptSaveFile({ title: "Asiakirjajulkisuuskuvauksen tiedot CSV", filterExtensions: [ "*.csv" ], fileName: "asiakirjajulkisuuskuvaus-tiedot.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+var tvExportFile = window.promptSaveFile({ title: "Tietovarantojen tiedot CSV", filterExtensions: ["*.csv"], fileName: "tietovarannot.csv" });
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan asiakirjajulkisuuskuvauksen tiedot CSV");
+
+var csvData = [];
+var jarjestelmat = $("application-component").filter(fth);
+jarjestelmat.sort(julkinennimicompare);
+jarjestelmat.each(function (jarj) {
+  if (jarj.prop("Virallinen") == "F") return; // ei listata selvitettäviä
+  if (jarj.prop("_JärjestelmäsalkunVapaateksti") == "1") return; // ei salkun liittymien vapaatekstejä
+  if (jarj.prop("Elinkaaren vaihe") == "Poistettu") return;
+
+  var ajk = jarj.prop("Asiakirjajulkisuuskuvaus");
+  if (ajk && ajk.toLowerCase().trim().startsWith("ei")) return;
+
+  var jarjnimi = jarj.prop("Julkinen nimi");
+  if (!jarjnimi) jarjnimi = jarj.name;
+  if (jarjnimi.toLowerCase().trim().startsWith("(ei viedä")) return;
+
+  var toimiala = "Muut";
+  var toimialanimi = "(ei määritelty)";
+  var omistaja = $("#" + jarj.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").filter(fth).first();
+  if (omistaja) {
+    if (omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") return;  // ei listata ulkoisia
+    if (omistaja.prop("Toimiala")) toimiala = omistaja.prop("Toimiala");
+    if (toimiala == "LUP" || toimiala == "HYTET") return;
+    var omistavatoimiala = omistaja;
+    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimiala") {
+      omistavatoimiala = $("#" + omistavatoimiala.id).inRels("aggregation-relationship").sourceEnds("business-actor").filter(fth).first();
+      console.log("Omistaja = " + omistaja + ", omistavatoimiala = " + omistavatoimiala);
+    }
+    if (omistavatoimiala) toimialanimi = omistavatoimiala.name;
+  }
+
+  var varannot = $("#" + jarj.id).outRels("serving-relationship").targetEnds("product").filter(fthHaving({ "_Tietovaranto": "1" }));
+  varannot.sort(namecompare);
+  var i = 1;
+  var varantostr = "";
+  varannot.each(function (varanto) {
+    if (i > 1) varantostr = varantostr + ";";
+    varantostr = varantostr + varanto.name;
+    i++;
+  });
+
+  var avoinrajapinta = jarj.prop("Tietojen saatavuus avoimella rajapinnalla");
+  if (avoinrajapinta && !avoinrajapinta.startsWith("http")) avoinrajapinta = "";
+
+  var datarow = {};
+  datarow["Tietojärjestelmä"] = jarjnimi;
+  datarow["Toimiala"] = toimialanimi;
+  datarow["Vastuuyksikkö"] = omistaja ? omistaja.name : "EI OMISTAJAA";
+  datarow["Tietovarannot"] = varantostr;
+  datarow["Tietojen saatavuus avoimella rajapinnalla"] = avoinrajapinta;
+  for (var i = 0; i < viemyoskentat.length; i++) {
+    datarow[viemyoskentat[i]] = jarj.prop(viemyoskentat[i]);
+  }
+  csvData.push(datarow);
+
+});
+
+var csvHeaders = [
+  "Tietojärjestelmä",
+  "Toimiala",
+  "Vastuuyksikkö",
+  "Tietovarannot",
+  "Tietojen saatavuus avoimella rajapinnalla"
+];
+
+for (var i = 0; i < viemyoskentat.length; i++) {
+  csvHeaders.push(viemyoskentat[i]);
+}
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> Tallennetaan tietovarantojen tiedot CSV");
+var csvData = [];
+var varannot = $("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (varanto) {
+  var toimiala = "Muut";
+  var toimialanimi = "(ei määritelty)";
+  var omistaja = $("#" + varanto.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").filter(fth).first();
+  if (omistaja) {
+    if (omistaja.prop("Sisäinen/ulkoinen") == "ulkoinen") return;  // ei listata ulkoisia
+    if (omistaja.prop("Toimiala")) toimiala = omistaja.prop("Toimiala");
+    if (toimiala == "LUP" || toimiala == "HYTET") return;
+    var omistavatoimiala = omistaja;
+    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimiala") {
+      omistavatoimiala = $("#" + omistavatoimiala.id).inRels("aggregation-relationship").sourceEnds("business-actor").filter(fth).first();
+    }
+    if (omistavatoimiala) toimialanimi = omistavatoimiala.name;
+  }
+  var datarow = {};
+  datarow["Tietovaranto"] = varanto.name;
+  datarow["Toimiala"] = toimialanimi;
+  datarow["Kuvaus"] = varanto.documentation;
+  csvData.push(datarow);
+});
+
+var csvHeaders = [
+  "Tietovaranto",
+  "Toimiala",
+  "Kuvaus"
+];
+var theCSV = Papa.unparse({ fields: csvHeaders, data: csvData });
+$.fs.writeFile(tvExportFile, theCSV);
+
+console.log("> Valmis");
+console.log();
