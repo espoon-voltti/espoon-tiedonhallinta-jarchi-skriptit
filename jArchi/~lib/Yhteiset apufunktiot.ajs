@@ -134,3 +134,7 @@ function muuttunutMerkinta(elem1, elem2, aikaleima) {
   if (elem1) elem1.prop("_Muuttunut", aikaleima);
   if (elem2) elem2.prop("_Muuttunut", aikaleima);
 }
+
+function kuvaileRelaatio(rel) {
+  return rel + ": " + rel.source + " -> " + rel.target;
+}
