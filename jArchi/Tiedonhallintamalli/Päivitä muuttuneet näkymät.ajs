@@ -15,6 +15,12 @@ var aloitus = new Date();
 console.show();
 console.log(">>> Aloitetaan näkymien päivittäminen... " + aloitus.format("isoDateTime"));
 
+var organisaatiot = {};
+$("business-actor").filter(fth).each(function (elem) {
+  var tiedot = organisaatiot[elem.id] = {};
+  tiedot.elem = elem;
+});
+
 console.log("> Käydään läpi prosessien tiedot");
 var prosessit = {};
 $("business-process").filter(fth).each(function (elem) {
@@ -96,6 +102,7 @@ $("view").filter(fth).each(function (view) {
   else if (tietovarannot[kohdeid]) tiedot = tietovarannot[kohdeid];
   else if (tietojarjestelmat[kohdeid]) tiedot = tietojarjestelmat[kohdeid];
   else if (tehtavaluokat[kohdeid]) tiedot = tehtavaluokat[kohdeid];
+  else if (organisaatiot[kohdeid]) tiedot = organisaatiot[kohdeid];
   if (tiedot) {
     if (tiedot.nakymaLuotu) {  // jos löytyy duplikaatteja näkymiä samalle kohteelle, valitaan vanhin ajankohta
       if (luotu < tiedot.nakymaLuotu) tiedot.nakymaLuotu = luotu;
