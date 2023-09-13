@@ -1,0 +1,40 @@
+﻿/*
+ * Kutsuu peräkkäin päivitysskriptit julkaisun valmistelua varten
+ */
+
+"use strict";
+
+console.show();
+
+if (!($(selection).size() == 1 && $(selection).first().type == "archimate-model")) {
+    console.error("Koko mallin (Espoon tiedonhallintamalli) tulee olla valittuna tätä skriptiä ajettaessa. Valitse malli ja yritä uudelleen.");
+    exit();
+}
+
+var ohitavarmistus = 1;
+
+console.log("### Kutsutaan peräkkäin näkymien päivitysskriptejä");
+
+console.log("### Päivitä muuttuneet näkymät");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Päivitä muuttuneet näkymät.ajs");
+
+console.log("### Luo tietojärjestelmäkartat");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo tietojärjestelmäkartat.ajs");
+
+console.log("### Luo tietojärjestelmäkartta vapaateksteille");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo tietojärjestelmäkartta vapaateksteille.ajs");
+
+console.log("### Luo tietovarantokartta");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo tietovarantokartta.ajs");
+
+console.log("### Luo organisaatiokaavio");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo organisaatiokaavio.ajs");
+
+console.log("### Luo kerrosnäkymä organisaatiolle");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Luo kerrosnäkymä organisaatiolle.ajs");
+
+console.log("### Poista tyhjät kansiot");
+load(__SCRIPTS_DIR__ + "Tiedonhallintamalli/Poista tyhjät kansiot.ajs");
+
+console.log("### Valmis.");
+console.log("");

@@ -10,7 +10,7 @@ load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 
 console.show();
 console.log(">>> Tietovarantokartan luonti...");
-if (!window.confirm("Tämä poistaa ja luo uudestaan tietovarantokartan. Jatketaanko?")) exit();
+if (typeof ohitavarmistus === 'undefined' && !window.confirm("Tämä poistaa ja luo uudestaan tietovarantokartan. Jatketaanko?")) exit();
 
 var views = $("folder.Views").first();
 var tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintamalli").first();

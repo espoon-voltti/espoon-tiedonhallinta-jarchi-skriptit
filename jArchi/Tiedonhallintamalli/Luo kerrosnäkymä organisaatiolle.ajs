@@ -331,7 +331,7 @@ if ($(selection).size() == 1 && $(selection).first().type == "archimate-model") 
 }
 
 console.log("> Valittuna " + valinta.size() + " kohde(tta).");
-if (valinta.size() > 10) {
+if (typeof ohitavarmistus === 'undefined' && valinta.size() > 10) {
   if (!window.confirm("Olet valinnut " + valinta.size() + " kohdetta, joille luodaan kerrosnäkymät. Haluatko jatkaa?")) {
     console.log("> Keskeytetty");
     exit();

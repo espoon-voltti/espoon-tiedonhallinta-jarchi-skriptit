@@ -29,6 +29,8 @@ function varitaNakyma(varitettavaNakyma) {
       viewelem.setLabelExpression("${name}");
     /* else if (viewelem.type == "representation")
       viewelem.setLabelExpression("Tietosuojaseloste: ${name}\n\n[${property:Omistaja}]"); */
+    else if (viewelem.type == "business-actor")
+      viewelem.setLabelExpression("${name}\n[${property:Tyyppi}]");
     else {
       viewelem.setLabelExpression("${name}\n" + lisuke + "\n[${property:Omistaja}]");
     }

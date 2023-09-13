@@ -5,6 +5,7 @@
 
 "use strict"; 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 
 console.show();
 console.log(">>> Aloitetaan omistajien asettaminen... ");

@@ -12,7 +12,7 @@ load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
 var aikaleima = (new Date()).format("isoDateTime");
 console.show();
 console.log(">>> Tietojärjestelmäkarttojen luonti " + aikaleima);
-if (!window.confirm("Tämä poistaa ja luo uudestaan kaikki tietojärjestelmäkartat. Jatketaanko?")) exit();
+if (typeof ohitavarmistus === 'undefined' && !window.confirm("Tämä poistaa ja luo uudestaan kaikki tietojärjestelmäkartat. Jatketaanko?")) exit();
 
 var views = $("folder.Views").first();
 var tiedonhallintamalliFolder = $("#"+views.id).children("folder.Tiedonhallintamalli").first();

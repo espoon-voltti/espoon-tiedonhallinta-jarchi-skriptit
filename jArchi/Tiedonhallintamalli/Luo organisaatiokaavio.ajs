@@ -1,0 +1,95 @@
+﻿/*
+ * Luo Organisaatiokaavio-näkymän
+ */
+
+"use strict";
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+load(__SCRIPTS_DIR__ + "~lib/ViewRecycler.ajs");
+load(__SCRIPTS_DIR__ + "~lib/VäritäNäkymä.ajs");
+
+console.show();
+console.log(">>> Organisaatiokaavion luonti...");
+
+var views = $("folder.Views").first();
+var tiedonhallintamalliFolder = $("#" + views.id).children("folder.Tiedonhallintamalli").first();
+if (tiedonhallintamalliFolder == null) {
+    tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
+}
+
+var organisaatiot = {};
+var ylimmat = [];
+var aliorganisaatiot = {};
+$("business-actor").filter(fth).each(function (org) {
+    if (!org.prop("Sisäinen/ulkoinen") || org.prop("Sisäinen/ulkoinen") != "sisäinen") return;
+    if (!org.prop("Tyyppi")) return;  // jos ei asetettu tai tyhjä, ohitetaan
+    organisaatiot[org.id] = org;
+    if ($("#" + org.id).inRels("aggregation-relationship").size() == 0) ylimmat.push(org);
+    $("#" + org.id).outRels("aggregation-relationship").each(function (rel) {
+        if (!fth(rel.target)) return;
+        var aliorglist = aliorganisaatiot[org.id];
+        if (!aliorglist) {
+            aliorglist = [];
+            aliorganisaatiot[org.id] = aliorglist;
+        }
+        aliorglist.push(rel.target);
+    });
+});
+
+
+var existing = [];
+$("#" + tiedonhallintamalliFolder.id).find("view").each(function (view) {
+    if (view.name == "Organisaatiokaavio") {
+        existing.push(view);
+    }
+});
+
+var viewObj = createOrRecycleArchimateView(existing, "Organisaatiokaavio", tiedonhallintamalliFolder);
+var nakyma = viewObj.view;
+nakyma.prop("_Luotu", (new Date()).format("isoDateTime"));
+nakyma.prop("_Tiedonhallintamalli", "1");
+
+var juoksevay = reunusy;
+var objektit = {};
+
+var notekorkeus = 75; // oletuksesta poikkeava
+var noteleveys = 450;
+var note = createRecycledObject(viewObj, "note-1", "diagram-model-note", reunusx, juoksevay, noteleveys, notekorkeus);
+note.setText("Espoon kaupungin organisaatiokaavio tiedonhallintamallissa. Tuplaklikkaamalla organisaatiota pääset sen kerrosnäkymään.");
+note.fontStyle = "regular";
+note.fontSize = 12;
+note.textAlignment = TEXT_ALIGNMENT.CENTER;
+note.textPosition = TEXT_POSITION.CENTER;
+juoksevay += notekorkeus * 2;
+
+kuvionkorkeus = 75;
+kuviovalix = 150;
+kuviovaliy = 25;
+
+function piirraOrganisaatiot(orglista, x, y) {
+    orglista.sort(namecompare);
+    var ylisa = 0;
+    for (var i = 0; i < orglista.length; i++) {
+        objektit[orglista[i].id] = recycledViewAddElement(viewObj, orglista[i], x, y + ylisa, kuvionleveys, kuvionkorkeus);
+        $("#" + orglista[i].id).inRels("aggregation-relationship").each(function (rel) {  // pitäisi olla vain yksi sisääntuleva relaatio per tässä käsiteltävä organisaatio
+            recycledViewAddRelationship(viewObj, rel, objektit[rel.source.id], objektit[rel.target.id]);
+        });
+        var aliylisa = 0;
+        if (aliorganisaatiot[orglista[i].id]) {
+            aliylisa = piirraOrganisaatiot(aliorganisaatiot[orglista[i].id], x + kuvionleveys + kuviovalix, y + ylisa);
+        }
+        ylisa += Math.max(aliylisa, kuvionkorkeus + kuviovaliy);
+    }
+    return ylisa;
+}
+
+piirraOrganisaatiot(ylimmat, reunusx, juoksevay);
+
+// TODO tästä eteenpäin...
+
+recycledViewFinishRecycling(viewObj);
+varitaNakyma(nakyma);
+nakyma.documentation = "Tiedonhallintamalliin on tuotu hallintosäännön ja toimintaohjeiden mukaiset toimialat ja tulosalue tulosyksiköineen sekä konsernihallinnon yksiköt ja vastuuyksiköt. Näkymä generoitu " + nakyma.prop("_Luotu") + ".";
+
+console.log("<<<");
+console.log("");
