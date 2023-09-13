@@ -58,7 +58,7 @@ function fthHaving(propFilters, propNotFilters) {
 }
 
 function toimialaOrganisaatio(tunnus) {
-  return $("business-actor").filter(fthHaving({"Tyyppi": "Toimiala", "Toimiala": tunnus})).first();
+  return $("business-actor").filter(fthHaving({"Tyyppi": "Toimialataso", "Toimiala": tunnus})).first();
 }
 
 function toimialanNimi(tunnus) {

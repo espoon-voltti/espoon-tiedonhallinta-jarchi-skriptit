@@ -68,7 +68,7 @@ jarjestelmat.each(function (jarj) {
     if (omistaja.prop("Toimiala")) toimiala = omistaja.prop("Toimiala");
     if (toimiala == "LUP" || toimiala == "HYTET") return;
     var omistavatoimiala = omistaja;
-    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimiala") {
+    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimialataso") {
       omistavatoimiala = $("#" + omistavatoimiala.id).inRels("aggregation-relationship").sourceEnds("business-actor").filter(fth).first();
       console.log("Omistaja = " + omistaja + ", omistavatoimiala = " + omistavatoimiala);
     }
@@ -127,7 +127,7 @@ var varannot = $("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(fun
     if (omistaja.prop("Toimiala")) toimiala = omistaja.prop("Toimiala");
     if (toimiala == "LUP" || toimiala == "HYTET") return;
     var omistavatoimiala = omistaja;
-    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimiala") {
+    while (omistavatoimiala && omistavatoimiala.prop("Tyyppi") != "Toimialataso") {
       omistavatoimiala = $("#" + omistavatoimiala.id).inRels("aggregation-relationship").sourceEnds("business-actor").filter(fth).first();
     }
     if (omistavatoimiala) toimialanimi = omistavatoimiala.name;
