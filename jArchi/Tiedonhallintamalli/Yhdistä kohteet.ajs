@@ -86,7 +86,7 @@ if (tietosuojaselosteet.length) {
 if (tehtavaluokat.length) {
   var jatka = true;
   if (prosessit.length && tietovarannot.length) {
-    jatka = window.confirm("Kytketäänkö tehtäväluokka(/-at) [" + tehtavaluokat + "] prosesseihin [" + prosessit + "] ja tietovarantoihin [" + tietovarannot + "]?"));
+    jatka = window.confirm("Kytketäänkö tehtäväluokka(/-at) [" + tehtavaluokat + "] prosesseihin [" + prosessit + "] ja tietovarantoihin [" + tietovarannot + "]?");
   }
   if (jatka) {
     for (var i = 0; i < tehtavaluokat.length; i++) {
@@ -117,7 +117,7 @@ if (tehtavaluokat.length) {
 if (prosessit.length) {
   var jatka = true;
   if (tietovarannot.length && tietojarjestelmat.length) {
-    jatka = window.confirm("Kytketäänkö prosessi(t) [" + prosessit + "] tietovarantoihin [" + tietovarannot + "] ja tietojärjestelmiin [" + tietojarjestelmat + "]?"));
+    jatka = window.confirm("Kytketäänkö prosessi(t) [" + prosessit + "] tietovarantoihin [" + tietovarannot + "] ja tietojärjestelmiin [" + tietojarjestelmat + "]?");
   }
   if (jatka) {
     for (var i = 0; i < prosessit.length; i++) {

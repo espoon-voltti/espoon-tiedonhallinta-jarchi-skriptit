@@ -91,12 +91,13 @@ function luoNakymaProsessille(element) {
     juoksevay += kuvionkorkeus + kuviovaliy;
   }
 
+
   var syoteLahdeRels = $("#" + element.id).inRels("flow-relationship");
-  if (element.prop("_NäytäVainOmatSyötteet")) syoteLahdeRels = syoteLahdeRels.filter(function (rel) { return rel.prop("_Kohteelta"); });
+  if (element.prop("_NäytäVainOmatSyötteet")) syoteLahdeRels = syoteLahdeRels.filter(function (rel) { return rel.prop("_Kohteelta") != null; });
   var saasyotteita = syoteLahdeRels.sourceEnds("business-process").filter(fth);
   saasyotteita.sort(tunnistecompare);
   var syoteKohdeRels = $("#" + element.id).outRels("flow-relationship");
-  if (element.prop("_NäytäVainOmatSyötteet")) syoteKohdeRels = syoteKohdeRels.filter(function (rel) { return rel.prop("_Lähteeltä"); });
+  if (element.prop("_NäytäVainOmatSyötteet")) syoteKohdeRels = syoteKohdeRels.filter(function (rel) { return rel.prop("_Lähteeltä") != null; });
   var tuottaasyotteita = syoteKohdeRels.targetEnds("business-process").filter(fth);
   tuottaasyotteita.sort(tunnistecompare);
   saasyotteita = saasyotteita.not(tuottaasyotteita);
