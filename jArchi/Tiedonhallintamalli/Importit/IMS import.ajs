@@ -32,8 +32,8 @@ var imskentat = {
   "Lopputuotos (palvelu/asiakirja) *": "Prosessissa syntyvä lopputuotos",
   "Prosessi saa syötteitä *": "Saa syötteitä",
   "Prosessi tuottaa syötteitä *": "Tuottaa syötteitä",
-  "Prosessin omistuksen lisätieto *": "Omistuksen lisätieto",
-  "Koskee asianhallintaa *": "_Koskee asianhallintaa IMS"  // käsitellään MYÖS erikseen
+  "Koskee asianhallintaa *": "_Koskee asianhallintaa IMS",  // käsitellään MYÖS erikseen
+  "Prosessin omistuksen lisätieto": "Omistuksen lisätieto"  // tähti otettu pois 11.7.2023, jotta ei ohjata tämän täyttämiseen
 };
 
 function siisti(arvo) {
