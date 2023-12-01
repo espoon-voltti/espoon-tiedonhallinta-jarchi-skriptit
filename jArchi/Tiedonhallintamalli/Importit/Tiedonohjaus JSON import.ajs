@@ -13,6 +13,7 @@
  * joten tässä luetaan kaksi tiedostoa.
  * 
  * JSONin pretty print onnistuu esim. pythonilla
+ *  import json
  *  f = open(r"C:\Users\...\Espoon-TOS.json", "r", encoding="utf-8")
  *  js = json.load(f)
  *  f.close()
@@ -27,6 +28,7 @@ load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
 
 var dokumentinMetadatat = {
+  "Arkistoinnin lisätietoja": null,
   "Arkistointitapa": null,
   //"Asiakirjan tyyppi": null,
   "Asiakirjatyypin tarkenne (=asiakirjallinen tieto)": null,
@@ -36,11 +38,13 @@ var dokumentinMetadatat = {
   "Salassapitoaika": null,
   "Salassapitoperuste": null,
   "Siirretäänkö säilytysajan jälkeen arkistoon": null,
+  "Säilytyksen lisätietoja": null,
   "Säilytysaika": null,
   "Säilytysajan peruste": null,
   "Säilytystapa": null,
   //"Tiedonhallinta": null,
   "Tietojärjestelmä": null,
+  "Tietosisällön kuvailu": null,
   "Tietovaranto": null
 }
 
@@ -305,25 +309,28 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
     for (var i = 0; doktyypit && i < doktyypit.length; i++) {
       var metadatavalues = doktyypit[i];
       kuvaus += "- " + muotoileTieto("Asiakirjatyypin tarkenne (=asiakirjallinen tieto)", metadatavalues, docmetadatamap);
-      var erotin = ":";
-      var lisaaTieto = function(tieto, ennen, jalkeen, ohitaerotin) {
+      var lisaaTieto = function(tieto, ennen, jalkeen, erotin) {
         var teksti = muotoileTieto(tieto, metadatavalues, docmetadatamap);
         if (teksti) {
-          kuvaus += (ohitaerotin ? "" : erotin) + " " + (ennen ? ennen : "") + teksti + (jalkeen ? jalkeen : "");
-          erotin = ";";
+          kuvaus += (erotin !== undefined ? erotin : ";") + " " + (ennen ? ennen : "") + teksti + (jalkeen ? jalkeen : "");
           return true;
         }
         return false;
       }
-      lisaaTieto("Julkisuusluokka");
+      lisaaTieto("Julkisuusluokka", "", "", ":");
+      lisaaTieto("Tietosisällön kuvailu", "\"", "\"", ",");
       var sailytys = lisaaTieto("Säilytysaika", "säilytys ");
-      lisaaTieto("Säilytystapa", "", "", true);
-      if (sailytys) lisaaTieto("Säilytysajan peruste", "(", ")", true);
+      lisaaTieto("Säilytystapa", "", "", "");
+      if (sailytys) {
+        lisaaTieto("Säilytysajan peruste", "(", ")", "");
+        lisaaTieto("Säilytyksen lisätietoja", "", "", ",");
+      }
       var salassapito = lisaaTieto("Salassapitoaika", "salassapito ");
-      if (salassapito) lisaaTieto("Salassapitoperuste", "(", ")", true);
+      if (salassapito) lisaaTieto("Salassapitoperuste", "(", ")", "");
       lisaaTieto("Henkilötietoluonne");
       lisaaTieto("Siirretäänkö säilytysajan jälkeen arkistoon", "siirto arkistoon ");
-      lisaaTieto("Arkistointitapa", "", "", true);
+      lisaaTieto("Arkistointitapa", "", "", "");
+      lisaaTieto("Arkistoinnin lisätietoja", "", "", ",");
       lisaaTieto("Hävitystapa", "hävitys ");
       lisaaTieto("Tietojärjestelmä", "tietojärjestelmät ");
       lisaaTieto("Tietovaranto");
