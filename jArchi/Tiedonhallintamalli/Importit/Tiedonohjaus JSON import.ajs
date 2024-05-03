@@ -41,6 +41,7 @@ var dokumentinMetadatat = {
   "Säilytyksen lisätietoja": null,
   "Säilytysaika": null,
   "Säilytysajan peruste": null,
+  "Säilytysajan laskentaperuste": null,
   "Säilytystapa": null,
   //"Tiedonhallinta": null,
   "Tietojärjestelmä": null,
@@ -109,6 +110,28 @@ function muotoileTieto(tunniste, metadatavalues, metadatamap, palautataulukko) {
     arvo = teksti;
   }
   return arvo ? arvo : "";
+}
+
+function kohteenTila(kohde) {
+  if (!kohde["Metadatas"]) return 0;
+  if (!kohde["Metadatas"]["XMetadata"]) return 0;
+
+  var metadatat = ensureArray(kohde["Metadatas"]["XMetadata"]);
+  for (var j = 0; j < metadatat.length; j++) {
+    if (metadatat[j]["MetadataName"] == "ItemStatus") {
+      return +metadatat[j]["Value"];  // +:lla tarkoitus muuttaa kokonaisluvuksi
+    }
+  }
+  return 0;
+}
+
+function onkoKohteenTilaOhitettava(kohde, kohteentyyppi = "tuntematon") {
+  /* var itemStatus = kohteenTila(kohde);
+  if (itemStatus == 1 || itemStatus == 2) {
+    console.log("> Ohitetaan " + kohteentyyppi + " " + kohde["Title"] + ", koska kohteen tila on " + itemStatus);
+    return true;
+  }*/  // ei ohiteta mitään
+  return false;
 }
 
 function parsiPvm(pvm) {
@@ -180,8 +203,18 @@ for (var h = 0; h < tossit.length; h++) {
   var tehtluokat = ensureArray(obj["XExportNew"]["CasegroupHierarchy"]["XCasegroupNew"]);
   for (var i = 0; i < tehtluokat.length; i++) { 
     var tehtluokkakoodi = tehtluokat[i]["FullCasegroupCode"];
+    if (onkoKohteenTilaOhitettava(tehtluokat[i], "tehtäväluokka " + tehtluokkakoodi)) continue;
     //var debug = (tehtluokkakoodi.startsWith("12.06"));
-    var nimike = tehtluokat[i]["Title"];
+    var kohteenTilaEtuliite = "";
+    switch (kohteenTila(tehtluokat[i])) {
+      case 1:
+        kohteenTilaEtuliite = "(L) ";
+        break;
+      case 2:
+        kohteenTilaEtuliite = "(S) ";
+        break;
+    }
+    var nimike = kohteenTilaEtuliite + tehtluokat[i]["Title"];
     //var muutos = [];
     console.log(tehtluokkakoodi + " " + nimike);
 
@@ -257,6 +290,7 @@ for (var h = 0; h < tossit.length; h++) {
       var tehtavat = ensureArray(tasks["XTaskNew"]);
       //debug? console.log(tehtavat) :"";
       for (var j = 0; j < tehtavat.length; j++) {
+        if (onkoKohteenTilaOhitettava(tehtavat[j], "käsittelyvaihe")) continue;
         //debug? console.log("j = " + j) :"";
         //debug? console.log(tehtavat[j]) :"";
         taskmap[tehtavat[j]["Id"]] = tehtavat[j];
@@ -273,13 +307,27 @@ for (var h = 0; h < tossit.length; h++) {
         if (doctypesroot) {
           var doctypes = ensureArray(doctypesroot["XDocumentTypeNew"]);
           for (var k = 0; k < doctypes.length; k++) {
+            if (onkoKohteenTilaOhitettava(doctypes[k], "tehtäväluokan " + tehtluokkakoodi + " asiakirjatyyppi")) continue;
             var metadatavalues = {};
             var metadatat = ensureArray(doctypes[k]["Metadatas"]["XMetadata"]);
+            var kohteenTilaEtuliite = "";
+            switch (kohteenTila(tehtluokat[i])) {
+              case 1:
+                kohteenTilaEtuliite = "(Luonnos) ";
+                break;
+              case 2:
+                kohteenTilaEtuliite = "(Syötössä) ";
+                break;
+            }
             for (var l = 0; l < metadatat.length; l++) {
               //debug? console.log("l = " + l) :"";
               //debug? console.log(metadatat[l]) :"";
               if (metadatat[l]["Title"] in dokumentinMetadatat) {
-                metadatavalues[metadatat[l]["Title"]] = metadatat[l]["Value"];
+                if (metadatat[l]["Title"] == "Asiakirjatyypin tarkenne (=asiakirjallinen tieto)" && kohteenTilaEtuliite) {
+                  metadatavalues[metadatat[l]["Title"]] = kohteenTilaEtuliite + metadatat[l]["Value"];
+                } else {
+                  metadatavalues[metadatat[l]["Title"]] = metadatat[l]["Value"];
+                }
               }
               if (metadatat[l]["MetadataName"] == "EventTime") {
                 var paivitysPvm = parsiPvm(metadatat[l]["Value"]);
@@ -290,6 +338,7 @@ for (var h = 0; h < tossit.length; h++) {
           }
         }
       }
+      // tehtluokkaitem.elem.prop("_KäsittelyvaiheetAsiakirjatyypitJSON", JSON.stringify(kasittelyvaiheet));
     }
     //debug? console.log("Jälk: " + JSON.stringify(tehtluokkaitem)) :"";
   }
@@ -297,6 +346,7 @@ for (var h = 0; h < tossit.length; h++) {
 
 for (var tehtluokkakoodi in tehtavaluokkaMap) {
   var kuvaus = "";
+  var kasittelyvaiheetAsiakirjatyypit = {};
   var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
   if (!tehtluokkaitem.loytyi) continue;
 
@@ -305,6 +355,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
   for (var h = 0; tehtluokkaitem.jarjestys && h < tehtluokkaitem.jarjestys.length; h++) {
     var kasittelyvaihe = tehtluokkaitem.jarjestys[h];
     kuvaus += "KÄSITTELYVAIHE " + kasittelyvaihe + "\n";
+    var asiakirjatyypit = kasittelyvaiheetAsiakirjatyypit[kasittelyvaihe] = [];
     doktyypit = tehtluokkaitem.kasittelyvaiheet[kasittelyvaihe];
     for (var i = 0; doktyypit && i < doktyypit.length; i++) {
       var metadatavalues = doktyypit[i];
@@ -320,7 +371,8 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
       lisaaTieto("Julkisuusluokka", "", "", ":");
       lisaaTieto("Tietosisällön kuvailu", "\"", "\"", ",");
       var sailytys = lisaaTieto("Säilytysaika", "säilytys ");
-      lisaaTieto("Säilytystapa", "", "", "");
+      lisaaTieto("Säilytysajan laskentaperuste", "laskentaperuste ", "", "");
+      lisaaTieto("Säilytystapa", "", "", ",");
       if (sailytys) {
         lisaaTieto("Säilytysajan peruste", "(", ")", "");
         lisaaTieto("Säilytyksen lisätietoja", "", "", ",");
@@ -335,6 +387,11 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
       lisaaTieto("Tietojärjestelmä", "tietojärjestelmät ");
       lisaaTieto("Tietovaranto");
       kuvaus += "\n";  
+      var metadataArvot = [];
+      for (var metadataname in dokumentinMetadatat) {
+        metadataArvot.push(muotoileTieto(metadataname, metadatavalues, docmetadatamap));
+      }
+      asiakirjatyypit.push(metadataArvot);
     }
     kuvaus += "\n";  
   }
@@ -344,7 +401,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
     console.log("- Kuvaus päivittyi " + tehtluokka);
     tehtluokka.prop("_Päivitetty", aikaleima);
   }
-
+  tehtluokka.prop("_KäsittelyvaiheetAsiakirjatyypitJSON", JSON.stringify(kasittelyvaiheetAsiakirjatyypit));
 }
 
 console.log();
@@ -353,7 +410,20 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
   var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
   if (!tehtluokkaitem.loytyi) {
     var tehtluokka = tehtluokkaitem.elem;
-    console.error("- TEHTÄVÄLUOKKAA EI ENÄÄ LÖYTYNYT - TEE JOTAIN? " + tehtluokka);
+    var tvcnt = $("#" + tehtluokka.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" })).size();
+    var proscnt = $("#" + tehtluokka.id).inRels("serving-relationship").sourceEnds("business-process").filter(fth).size();
+    var tjcnt = $("#" + tehtluokka.id).inRels("serving-relationship").sourceEnds("application-component").filter(fth).size();
+    var cntstr = "tietovarantoja " + tvcnt + ", prosesseja " + proscnt + ", tietojärjestelmiä " + tjcnt;
+
+    if (window.confirm("Tehtäväluokkaa " + tehtluokka + " ei enää löydy (" + cntstr + "). Poistetaanko tehtäväluokka?")) {
+      console.log(">> Poistetaan tehtäväluokka " + tehtluokka);
+      $("#" + tehtluokka.id).rels().each(function (rel) {
+        muuttunutMerkinta(rel.source, rel.target, aikaleima);  // kohde itse tulee merkattua useamman kerran ennen poistamista, mutta eipä haittaa...
+      });
+      tehtluokka.delete();
+    } else {
+      console.error("Ei poistettu tehtäväluokkaa, jota ei enää löydy: " + tehtluokka + "; " + cntstr);
+    }
   }
 }
 
@@ -409,6 +479,11 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
 }
 
 model.prop("Päivitetty Tiedonohjaussuunnitelmasta", uusinmuutos.format("isoDateTime"));
+var asiakirjanMetadataNimet = [];
+for (var metadataname in dokumentinMetadatat) {
+  asiakirjanMetadataNimet.push(metadataname);
+}
+model.prop("_AsiakirjatyypinMetadatat", JSON.stringify(asiakirjanMetadataNimet));
 console.log("> Valmis");
 console.log();
 
