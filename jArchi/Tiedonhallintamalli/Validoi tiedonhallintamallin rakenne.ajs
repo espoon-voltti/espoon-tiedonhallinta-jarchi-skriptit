@@ -101,6 +101,10 @@ var relaatiovalidoinnit = {
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietovaranto" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
     tarkistukset: [relaatioduplikaatit]
   },
+  "Tietojärjestelmä palvelee tehtäväluokkaa": {  // ylläpito TOJ:ssa
+    tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
+    tarkistukset: [relaatioduplikaatit, tulosta]
+  },
   "Tietojärjestelmä palvelee tietovarantoa": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietovaranto"; },
     tarkistukset: [relaatioduplikaatit]
@@ -246,6 +250,16 @@ function tulostaKohde(elem) {
     return elem + " (" + tulostaPolku(elem) + ")";
   }
 }
+
+function tulosta(elem) {
+  return ".";
+}
+
+/*
+function lisaaLahde(rel) {
+  rel.prop("Lähde", "Vuoden 2020 prosessiexcel")
+}
+*/
 
 var laskuri = 0;
 
