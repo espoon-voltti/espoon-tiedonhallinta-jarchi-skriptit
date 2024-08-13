@@ -4,6 +4,12 @@ Julkaistu avoimena lähdekoodina hyödynnä sellaisena kuin ovat -periaatteella.
 soveltumisesta mihinkään tiettyyn käyttötarkoitukseen emmekä tarjoa tukea. Saa käyttää 
 ja muokata sekä edelleen julkaista vapaasti.
 
+Tällä hetkellä testattu toimivaksi Archin 5.1.0 versiolla, jossa käytössä jArchi 1.5.0. 
+Archi ja sen jArchi-liitännäinen päivittyvät jatkuvasti, jolloin etenkin pluginin
+lähdekoodi voi vaatia ylläpitoa. Myös skriptit voivat vaatia ylläpitoa, kun Archin
+Javascript-engine ajoittain päivittyy. Archin ja sen liitännäisten vanhat versiot ovat
+myös edelleen saatavilla ja toimivaksi testattuja vaihtoehtoja.
+
 ## Mitä tarvitset
 
 Tarvitset Archi-työvälineen: https://www.archimatetool.com/
