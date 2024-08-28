@@ -26,7 +26,11 @@ var salkunkentat = {
   "Hakutekijät": "Hakutekijät",
   "Tietojen saatavuus avoimella rajapinnalla": "Tietojen saatavuus avoimella rajapinnalla",
   "Tietoaineistot": "Tietoaineistot",
-  "Asiarekisteri": "Asiarekisteri"
+  "Asiarekisteri": "Asiarekisteri",
+
+  "Sisältää henkilötietoja": null,  // käsitellään erikseen
+  "Käsitelläänkö järjestelmässä erityisiä henkilötietoryhmiä?": null,  // käsitellään erikseen
+  "Henkilötietojen luovutus": "Henkilötietojen luovutus"
 };
 
 var liittymienkentat = {
@@ -222,6 +226,12 @@ if (filePath) {
             }
           }
         }
+      }
+      var henkilotiedot = jarjRivi["Sisältää henkilötietoja"] + " ("
+        + jarjRivi["Käsitelläänkö järjestelmässä erityisiä henkilötietoryhmiä?"] + ")";
+      if (henkilotiedot != nykyJarj.prop("Henkilötietojen käsittely")) {
+        nykyJarj.prop("Henkilötietojen käsittely", henkilotiedot);
+        muutos["Henkilötietojen käsittely"] = henkilotiedot;
       }
 
       var uusiOmistaja = orgMap[jarjRivi["Omistajaorg"]];
