@@ -1,31 +1,23 @@
 ﻿/*
  * Luetaan sisään Dynastyn XML-export JSON-muotoon käännettynä.
- * JSON:iksi kääntäminen tehty XSLT-muunnoksena, johon löytyy xsl-tiedosto täältä: https://github.com/bramstein/xsltjson
- * ja sieltä conf-hakemistosta xml-to-json.xsl
- * Kyseiseen xsl-tiedostoon piti tehdä muokkaus, jottei tehtäväluokkien tunnisteita muuteta desimaaliluvuiksi vaan
- * säilytetään lainausmerkeissä. Jolloin xls-tiedoston rivi 413 muutetetaan muotoon (ensin poiskommentoitu vanha rivi ja sitten korvaava):
- *        <!-- <xsl:when test="normalize-space(.) ne . or not((string(.) castable as xs:integer  and not(starts-with(string(.),'+')) and not(starts-with(string(.),'0') and not(. = '0'))) or (string(.) castable as xs:decimal  and not(starts-with(string(.),'+')) and not(starts-with(.,'-.')) and not(starts-with(.,'.')) and not(starts-with(.,'-0') and not(starts-with(.,'-0.'))) and not(ends-with(.,'.')) and not(starts-with(.,'0') and not(starts-with(.,'0.'))) )) and not(. = 'false') and not(. = 'true') and not(. = 'null')"> -->
- *        <xsl:when test="not(. = 'false') and not(. = 'true') and not(. = 'null')">
- * Tämän jälkeen voi ajaa XSLT-muunnoksen esim. Saxon-kirjastolla, joka löytyy https://sourceforge.net/projects/saxon/files/Saxon-HE/10/Java/
- * Muunnoksen käynnistys komennolla esim.
- * java -jar saxon-he-10.5.jar "9_4 Dynasty TOS.xml" xml-to-json.xsl > Dynasty-TOS.json
- * Sitten näin syntynyt JSON luetaan sisään tällä jArchi-skriptillä. Espoossa on kaksi eri TOS-ilmentymää Dynastyssa, 
- * joten tässä luetaan kaksi tiedostoa.
- * 
- * JSONin pretty print onnistuu esim. pythonilla
- *  import json
- *  f = open(r"C:\Users\...\Espoon-TOS.json", "r", encoding="utf-8")
- *  js = json.load(f)
- *  f.close()
- *  f2 = open(r"C:\Users\...\Espoon-TOS-formatted.json", "w", encoding="utf-8")
- *  json.dump(js, f2, indent=2)
- *  f2.close()
+ * JSON:iksi kääntäminen onnistuu pythonilla, ks. xmltojson.py näiden skriptien Github-repositorion juuressa. Ajetaan esim. komennolla:
+ *   python xmltojson.py "Espoon tos 12.3.2024.xml" tos-20240312.json
+ * Ko. skriptin ajamiseksi pitää olla asennettuna pythonin xmltodict-moduli, asennus komennolla: pip install xmltodict
  */
 
 "use strict";
 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+var prosessiTunnistePattern = /^(([OT]|Y[AJP]?)?\d+\.(\d+|\d+(\.\d+)*)?)($|[^0-9\.])/;
+var tietojarjestelmaTunnistePattern = /\((\w+)\)\s*$/;
+
+var tehtavaluokanMetadatat = {
+  "Prosessitunnus": 1,
+  "Tietojärjestelmä": 1,
+  // "Tietovaranto": 1   // tehtäväluokan metadatoissa ei ole tietovarantotietoa
+}
 
 var dokumentinMetadatat = {
   "Arkistoinnin lisätietoja": null,
@@ -35,6 +27,7 @@ var dokumentinMetadatat = {
   "Henkilötietoluonne": null,
   "Hävitystapa": null,
   "Julkisuusluokka": null,
+  //"Prosessitunnus": 1,  // asiakirjatyypin metadatoissa ei ole prosessitunnusta
   "Salassapitoaika": null,
   "Salassapitoperuste": null,
   "Siirretäänkö säilytysajan jälkeen arkistoon": null,
@@ -44,9 +37,9 @@ var dokumentinMetadatat = {
   "Säilytysajan laskentaperuste": null,
   "Säilytystapa": null,
   //"Tiedonhallinta": null,
-  "Tietojärjestelmä": null,
+  "Tietojärjestelmä": 1,
   "Tietosisällön kuvailu": null,
-  "Tietovaranto": null
+  "Tietovaranto": 1
 }
 
 function muotoileVuosi(arvo) {
@@ -109,7 +102,7 @@ function muotoileTieto(tunniste, metadatavalues, metadatamap, palautataulukko) {
     }
     arvo = teksti;
   }
-  return arvo ? arvo : "";
+  return arvo ? arvo : (palautataulukko ? [] : "");
 }
 
 function kohteenTila(kohde) {
@@ -147,10 +140,12 @@ model.purpose;  // feilataan nyt jos mallia ei valittuna
 
 var tossit = [];
 while (true) {
-  var filePath = window.promptOpenFile({ title: "Avaa tiedonohjaussuunnitelma JSON, cancel jos ei lisää", 
-    filterExtensions: ["*.json"], fileName: "tiedonohjaus.json" });
+  var filePath = window.promptOpenFile({
+    title: "Avaa tiedonohjaussuunnitelma JSON, cancel jos ei lisää",
+    filterExtensions: ["*.json"], fileName: "tiedonohjaus.json"
+  });
   if (!filePath) break;
-  tossit.push({file: filePath});
+  tossit.push({ file: filePath });
 }
 if (!tossit.length) {
   console.log("> Cancelled");
@@ -158,11 +153,11 @@ if (!tossit.length) {
 }
 
 var businessFolder = $("folder.Business").first();
-var tiedonhallintamalliFolder = $("#"+businessFolder.id).children("folder.Tiedonhallintamalli").first();
+var tiedonhallintamalliFolder = $("#" + businessFolder.id).children("folder.Tiedonhallintamalli").first();
 if (tiedonhallintamalliFolder == null) {
   tiedonhallintamalliFolder = views.createFolder("Tiedonhallintamalli");
 }
-var tehtavaluokatFolder = $("#"+tiedonhallintamalliFolder.id).children("folder.Tehtäväluokat").first();
+var tehtavaluokatFolder = $("#" + tiedonhallintamalliFolder.id).children("folder.Tehtäväluokat").first();
 if (tehtavaluokatFolder == null) {
   tehtavaluokatFolder = tiedonhallintamalliFolder.createFolder("Tehtäväluokat");
 }
@@ -171,7 +166,7 @@ var tehtavaluokkaMap = {};
 $("business-function").filter(fth).each(function (bf) {
   var tehtavaluokka = bf.prop("Tunniste");
   if (!tehtavaluokka) return;
-  tehtavaluokkaMap[tehtavaluokka] = {elem: bf};
+  tehtavaluokkaMap[tehtavaluokka] = { elem: bf };
 });
 
 var aikaleima = new Date().format("isoDateTime");
@@ -190,18 +185,23 @@ for (var h = 0; h < tossit.length; h++) {
   var obj = JSON.parse(jsontext);
 
   //console.log("CASEGROUP METADATA");
-  //var casemetadatamap = lueMetadataInfot(obj["XExportNew"]["CasegroupMetadataInfo"]);
+  var casegroupmetadatamap = lueMetadataInfot(obj["XExportNew"]["CasegroupMetadataInfo"]);
+  for (var metadataname in tehtavaluokanMetadatat) {
+    if (!(metadataname in casegroupmetadatamap)) {
+      console.error(tossit[h].file + ":ssa ei löydy tehtäväluokan metatietotyyppiä " + metadataname);  // infotaan, sinänsä ei seuraa muuta kuin että näitä ei sitten tule 
+    }
+  }
   //console.log("DOCUMENT METADATA");
   var docmetadatamap = lueMetadataInfot(obj["XExportNew"]["DocumentMetadataInfo"]);
   for (var metadataname in dokumentinMetadatat) {
     if (!(metadataname in docmetadatamap)) {
-      console.error(tossit[h].file + ":ssa ei löydy metatietotyyppiä " + metadataname);  // infotaan, sinänsä ei seuraa muuta kuin että näitä ei sitten tule 
+      console.error(tossit[h].file + ":ssa ei löydy dokumentin metatietotyyppiä " + metadataname);  // infotaan, sinänsä ei seuraa muuta kuin että näitä ei sitten tule 
     }
   }
 
   var taskmap = {};
   var tehtluokat = ensureArray(obj["XExportNew"]["CasegroupHierarchy"]["XCasegroupNew"]);
-  for (var i = 0; i < tehtluokat.length; i++) { 
+  for (var i = 0; i < tehtluokat.length; i++) {
     var tehtluokkakoodi = tehtluokat[i]["FullCasegroupCode"];
     if (onkoKohteenTilaOhitettava(tehtluokat[i], "tehtäväluokka " + tehtluokkakoodi)) continue;
     //var debug = (tehtluokkakoodi.startsWith("12.06"));
@@ -241,12 +241,12 @@ for (var h = 0; h < tossit.length; h++) {
           continue;
         }
         parentluokka = parentluokka.elem;
-        var parentkansio = $("#"+parentluokka.id).parent().first();
+        var parentkansio = $("#" + parentluokka.id).parent().first();
         if (/^\d\d(\.\d\d){4,}$/.exec(tehtluokkakoodi)) {
           kansio = parentkansio;
         } else {
-          kansio = $("#"+parentkansio.id).children("folder").filter(function (fld) { 
-            return fld.prop("Tunniste") == parentkoodi; 
+          kansio = $("#" + parentkansio.id).children("folder").filter(function (fld) {
+            return fld.prop("Tunniste") == parentkoodi;
           }).first();
           if (!kansio) {
             kansio = parentkansio.createFolder(parentluokka.name);
@@ -262,18 +262,33 @@ for (var h = 0; h < tossit.length; h++) {
         model.createRelationship("specialization-relationship", "", tehtluokka, parentluokka);
         muuttunutMerkinta(tehtluokka, parentluokka, aikaleima);
       }
-      tehtluokkaitem = {elem: tehtluokka};
+      tehtluokkaitem = { elem: tehtluokka };
       tehtavaluokkaMap[tehtluokkakoodi] = tehtluokkaitem;
       console.log("- Lisättiin tehtäväluokka " + tehtluokka + " kansioon " + kansio);
-    } 
+    }
 
     tehtluokkaitem.loytyi = true;
+    tehtluokkaitem.prosessit = {};
+    tehtluokkaitem.tietovarannot = {};
+    tehtluokkaitem.tietojarjestelmat = {};
 
+    var metadatavalues1 = {};
     var metadatat = ensureArray(tehtluokat[i]["Metadatas"]["XMetadata"]);
     for (var j = 0; j < metadatat.length; j++) {
       if (metadatat[j]["MetadataName"] == "EventTime") {
         var paivitysPvm = parsiPvm(metadatat[j]["Value"]);
         uusinmuutos = uusinmuutos ? (paivitysPvm > uusinmuutos ? paivitysPvm : uusinmuutos) : paivitysPvm;
+      }
+      if (tehtavaluokanMetadatat[metadatat[j]["Title"]] && metadatat[j]["Value"]) {
+        metadatavalues1[metadatat[j]["Title"]] = metadatat[j]["Value"];
+        if (metadatat[j]["Title"] == "Prosessitunnus") {
+          var prosessitunnukset = muotoileTieto(metadatat[j]["Title"], metadatavalues1, casegroupmetadatamap, true);
+          for (var n = 0; n < prosessitunnukset.length; n++) tehtluokkaitem.prosessit[prosessitunnukset[n]] = 1;
+        }
+        if (metadatat[j]["Title"] == "Tietojärjestelmä") {
+          var tietojarjestelmat = muotoileTieto(metadatat[j]["Title"], metadatavalues1, casegroupmetadatamap, true);
+          for (var n = 0; n < tietojarjestelmat.length; n++) tehtluokkaitem.tietojarjestelmat[tietojarjestelmat[n]] = 1;
+        }
       }
     }
 
@@ -297,10 +312,10 @@ for (var h = 0; h < tossit.length; h++) {
         var tehtavanimi = tehtavat[j]["Title"];
         var doctypesroot = tehtavat[j]["DocumentTypes"];
         var parent = taskmap[tehtavat[j]["ParentId"]];
-        var parentnimi = parent? parent["Title"] : undefined;
+        var parentnimi = parent ? parent["Title"] : undefined;
         if (parentnimi) tehtavanimi = parentnimi;  // käytetään parent-nimeä, jos on
         var doktyypit = kasittelyvaiheet[tehtavanimi];
-        if (!doktyypit) { 
+        if (!doktyypit) {
           doktyypit = kasittelyvaiheet[tehtavanimi] = [];
           tehtluokkaitem.jarjestys.push(tehtavanimi);
         }
@@ -334,13 +349,26 @@ for (var h = 0; h < tossit.length; h++) {
                 uusinmuutos = uusinmuutos ? (paivitysPvm > uusinmuutos ? paivitysPvm : uusinmuutos) : paivitysPvm;
               }
             }
+            for (var l = 0; l < metadatat.length; l++) {
+              if (!metadatat[l]["Value"]) continue;
+              if (metadatat[l]["Title"] == "Tietovaranto") {
+                var tietovarannot = muotoileTieto(metadatat[l]["Title"], metadatavalues, docmetadatamap, true);
+                for (var n = 0; n < tietovarannot.length; n++) tehtluokkaitem.tietovarannot[tietovarannot[n]] = 1;
+              }
+              if (metadatat[l]["Title"] == "Tietojärjestelmä") {
+                var tietojarjestelmat = muotoileTieto(metadatat[l]["Title"], metadatavalues, docmetadatamap, true);
+                for (var n = 0; n < tietojarjestelmat.length; n++) tehtluokkaitem.tietojarjestelmat[tietojarjestelmat[n]] = 1;
+              }
+            }
             doktyypit.push(metadatavalues);
           }
         }
       }
-      // tehtluokkaitem.elem.prop("_KäsittelyvaiheetAsiakirjatyypitJSON", JSON.stringify(kasittelyvaiheet));
     }
     //debug? console.log("Jälk: " + JSON.stringify(tehtluokkaitem)) :"";
+    //if (Object.keys(tehtluokkaitem.prosessit).length) console.log("  - prosessit: " + JSON.stringify(Object.keys(tehtluokkaitem.prosessit)));
+    //if (Object.keys(tehtluokkaitem.tietovarannot).length) console.log("  - tietovarannot: " + JSON.stringify(Object.keys(tehtluokkaitem.tietovarannot)));
+    //if (Object.keys(tehtluokkaitem.tietojarjestelmat).length) console.log("  - tietojärjestelmät: " + JSON.stringify(Object.keys(tehtluokkaitem.tietojarjestelmat)));
   }
 }
 
@@ -351,7 +379,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
   if (!tehtluokkaitem.loytyi) continue;
 
   var tehtluokka = tehtluokkaitem.elem;
-  
+
   for (var h = 0; tehtluokkaitem.jarjestys && h < tehtluokkaitem.jarjestys.length; h++) {
     var kasittelyvaihe = tehtluokkaitem.jarjestys[h];
     kuvaus += "KÄSITTELYVAIHE " + kasittelyvaihe + "\n";
@@ -360,7 +388,7 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
     for (var i = 0; doktyypit && i < doktyypit.length; i++) {
       var metadatavalues = doktyypit[i];
       kuvaus += "- " + muotoileTieto("Asiakirjatyypin tarkenne (=asiakirjallinen tieto)", metadatavalues, docmetadatamap);
-      var lisaaTieto = function(tieto, ennen, jalkeen, erotin) {
+      var lisaaTieto = function (tieto, ennen, jalkeen, erotin) {
         var teksti = muotoileTieto(tieto, metadatavalues, docmetadatamap);
         if (teksti) {
           kuvaus += (erotin !== undefined ? erotin : ";") + " " + (ennen ? ennen : "") + teksti + (jalkeen ? jalkeen : "");
@@ -386,14 +414,14 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
       lisaaTieto("Hävitystapa", "hävitys ");
       lisaaTieto("Tietojärjestelmä", "tietojärjestelmät ");
       lisaaTieto("Tietovaranto");
-      kuvaus += "\n";  
+      kuvaus += "\n";
       var metadataArvot = [];
       for (var metadataname in dokumentinMetadatat) {
         metadataArvot.push(muotoileTieto(metadataname, metadatavalues, docmetadatamap));
       }
       asiakirjatyypit.push(metadataArvot);
     }
-    kuvaus += "\n";  
+    kuvaus += "\n";
   }
 
   if (tehtluokka.documentation != kuvaus) {
@@ -429,46 +457,36 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
 
 console.log("> Tarkistetaan tietovarannot");
 var tietovarantoMap = {};
-$("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (tvelem) {
+$("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tvelem) {
   tietovarantoMap[tvelem.name] = tvelem;
 });
 for (var tehtluokkakoodi in tehtavaluokkaMap) {
   var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
   if (!tehtluokkaitem.loytyi) continue;
-  var tietovarannot = {};
-  for (var kasittelyvaihe in tehtluokkaitem.kasittelyvaiheet) {
-    doktyypit = tehtluokkaitem.kasittelyvaiheet[kasittelyvaihe];
-    for (var i = 0; doktyypit && i < doktyypit.length; i++) {
-      var metadatavalues = doktyypit[i];
-      var varantonimet = muotoileTieto("Tietovaranto", metadatavalues, docmetadatamap, true);
-      for (var j = 0; j < varantonimet.length; j++) {
-        tietovarannot[varantonimet[j]] = true;
-      }
-    }    
-  }
 
   var nykyvarannot = {};
-  $("#"+tehtluokkaitem.elem.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({"_Tietovaranto": "1"})).each(function (tvelem) {
-    nykyvarannot[tvelem.name] = tvelem;
+  $("#" + tehtluokkaitem.elem.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" })).each(function (tvelem) {
+    nykyvarannot[tvelem.id] = tvelem;
   });
 
-  for (var varantonimi in tietovarannot) {
+  for (var varantonimi in tehtluokkaitem.tietovarannot) {
     if (!(varantonimi in tietovarantoMap)) {
-      console.error("Tehtäväluokan " + tehtluokkakoodi + " tietovarantoa " + varantonimi + " ei löydy, ohitetaan");
+      console.error("Tehtäväluokan " + tehtluokkaitem.elem.name + " tietovarantoa " + varantonimi + " ei löydy, ohitetaan");
       continue;
     }
-    if (!(varantonimi in nykyvarannot)) {
-      model.createRelationship("serving-relationship", "", tietovarantoMap[varantonimi], tehtluokkaitem.elem);
-      muuttunutMerkinta(tietovarantoMap[varantonimi], tehtluokkaitem.elem, aikaleima);
-      console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys tietovarantoon " + varantonimi);
+    var varanto = tietovarantoMap[varantonimi];
+    if (!(varanto.id in nykyvarannot)) {
+      model.createRelationship("serving-relationship", "", varanto, tehtluokkaitem.elem);
+      muuttunutMerkinta(varanto, tehtluokkaitem.elem, aikaleima);
+      console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys tietovarantoon " + varanto.name);
     } else {
-      delete nykyvarannot[varantonimi];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
+      delete nykyvarannot[varanto.id];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
     }
   }
-  for (var varantonimi in nykyvarannot) {
-    console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem + " yhteys tietovarantoon " + varantonimi);
-    $("#"+tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
-      if ($("#" + rel.id).sourceEnds().first().id == nykyvarannot[varantonimi].id) {
+  for (var varantoid in nykyvarannot) {
+    console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem.name + " yhteys tietovarantoon " + nykyvarannot[varantoid].name);
+    $("#" + tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
+      if ($("#" + rel.id).sourceEnds().first().id == varantoid) {
         muuttunutMerkinta(rel.source, rel.target, aikaleima);
         rel.delete();
         console.log("  - poistettu");
@@ -477,6 +495,138 @@ for (var tehtluokkakoodi in tehtavaluokkaMap) {
   }
 
 }
+
+console.log("> Tarkistetaan prosessit");
+var prosessiMap = {};
+$("business-process").filter(fth).each(function (proselem) {
+  if (proselem.prop("Tunniste")) {
+    prosessiMap[proselem.prop("Tunniste")] = proselem;
+  }
+  // Jätetään mahdollisuus merkitä TOS:ssa vielä oleva vanha tunniste ja kohdentaa sillä - vain jos ei löydy nykyistä prosessia ko. tunnisteella. Näitä voi lisätä useampia.
+  var tosvanhat = proselem.prop("_TOS vanha tunniste", true);
+  if (tosvanhat) {
+    for (var i = 0; i < tosvanhat.length; i++) {
+      if (!prosessiMap[tosvanhat[i]]) prosessiMap[tosvanhat[i]] = proselem;
+    }
+  }
+});
+for (var tehtluokkakoodi in tehtavaluokkaMap) {
+  var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+  if (!tehtluokkaitem.loytyi) continue;
+
+  var nykyprosessit = {};
+  $("#" + tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
+    if (rel.source.type != "business-process") return;
+    if (!fth(rel.source)) return;
+    var proselem = rel.source;
+    nykyprosessit[proselem.id] = { "prosessi": proselem, "relaatio": rel };
+  });
+
+  for (var prosessitieto in tehtluokkaitem.prosessit) {
+    var tunniste = null;
+    var match = prosessiTunnistePattern.exec(prosessitieto);
+    if (match) tunniste = match[1];
+
+    if (!tunniste || !(tunniste in prosessiMap)) {
+      console.error("Tehtäväluokan " + tehtluokkaitem.elem.name + " prosessia " + prosessitieto + " ei löydy, ohitetaan");
+      continue;
+    }
+    var prosessi = prosessiMap[tunniste];
+    //tunniste = prosessi.prop("Tunniste"); // siltä varalta, että match oli TOS vanhaan tunnisteeseen
+    if (prosessi.id in nykyprosessit) {
+      var nykyprositem = nykyprosessit[prosessi.id];
+      if (nykyprositem.relaatio.prop("Lähde")) {
+        //console.log("- Poistetaan lähde-tieto \"" + nykyprosessit[prosessi.id].relaatio.prop("Lähde")  + "\" tehtäväluokan " + tehtluokkaitem.elem.name + " yhteydeltä prosessiin " + prosessi.name + ", joka saatiin nyt TOS:sta");
+        nykyprositem.relaatio.removeProp("Lähde");
+      }
+      delete nykyprosessit[prosessi.id];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
+    } else {
+      model.createRelationship("serving-relationship", "", prosessi, tehtluokkaitem.elem);
+      muuttunutMerkinta(prosessi, tehtluokkaitem.elem, aikaleima);
+      console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys prosessiin " + prosessi.name);
+    }
+  }
+  for (var prosid in nykyprosessit) {   // käydään läpi jäljelle jääneet nykyiset, joita ei tullut TOS:sta
+    if (nykyprosessit[prosid].relaatio.prop("Lähde")) {
+      // console.log("- Säilytetään tehtäväluokan " + tehtluokkaitem.elem.name + " yhteys prosessiin " + nykyprosessit[prosid].prosessi.name + ", jota ei saatu TOS:sta, mutta jonka lähde on \"" + nykyprosessit[prosid].relaatio.prop("Lähde") + "\"");
+    } else {
+      console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem.name + " yhteys prosessiin " + nykyprosessit[prosid].prosessi.name);
+      var rel = nykyprosessit[prosid].relaatio;
+      muuttunutMerkinta(rel.source, rel.target, aikaleima);
+      rel.delete();
+      console.log("  - poistettu");
+    }
+  }
+}
+
+
+console.log("> Tarkistetaan tietojärjestelmät");
+var tietojarjestelmaMap = {};
+$("application-component").filter(fth).each(function (tjelem) {
+  if (tjelem.prop("Järjestelmäsalkku ID")) {
+    tietojarjestelmaMap[tjelem.prop("Järjestelmäsalkku ID")] = tjelem;
+  }
+  var thid = tjelem.prop("Tiedonhallintamalli ID");
+  if (thid && !tietojarjestelmaMap[thid]) {
+    tietojarjestelmaMap[thid] = tjelem;
+  }
+  // Jätetään mahdollisuus merkitä TOS:ssa vielä oleva vanha tunniste ja kohdentaa sillä - vain jos ei kyseistä tunnistetta löydy nykyisistä. Näitä voi lisätä useampia. 
+  var tosvanhat = tjelem.prop("_TOS vanha tunniste", true);
+  if (tosvanhat) {
+    for (var i = 0; i < tosvanhat.length; i++) {
+      if (!tietojarjestelmaMap[tosvanhat[i]]) tietojarjestelmaMap[tosvanhat[i]] = tjelem;
+    }
+  }
+});
+for (var tehtluokkakoodi in tehtavaluokkaMap) {
+  var tehtluokkaitem = tehtavaluokkaMap[tehtluokkakoodi];
+  if (!tehtluokkaitem.loytyi) continue;
+
+  var nykyjarjestelmat = {};
+  $("#" + tehtluokkaitem.elem.id).inRels("serving-relationship").each(function (rel) {
+    if (rel.source.type != "application-component") return;
+    if (!fth(rel.source)) return;
+    var tjelem = rel.source;
+    nykyjarjestelmat[tjelem.id] = { "jarjestelma": tjelem, "relaatio": rel };
+  });
+
+  for (var jarjestelmatieto in tehtluokkaitem.tietojarjestelmat) {
+    var tunniste = null;
+    var match = tietojarjestelmaTunnistePattern.exec(jarjestelmatieto);
+    if (match) tunniste = match[1];
+
+    if (!tunniste || !(tunniste in tietojarjestelmaMap)) {
+      console.error("Tehtäväluokan " + tehtluokkaitem.elem.name + " tietojärjestelmää " + jarjestelmatieto + " (havaittu tunniste \"" + tunniste + "\") ei löydy, ohitetaan");
+      continue;
+    }
+    var jarjestelma = tietojarjestelmaMap[tunniste];
+    if (jarjestelma.id in nykyjarjestelmat) {
+      var nykyjarjitem = nykyjarjestelmat[jarjestelma.id];
+      if (nykyjarjitem.relaatio.prop("Lähde")) {
+        //console.log("- Poistetaan lähde-tieto \"" + nykyjarjestelmat[jarjestelma.id].relaatio.prop("Lähde")  + "\" tehtäväluokan " + tehtluokkaitem.elem.name + " yhteydeltä tietojärjestelmään " + jarjestelma.name + ", joka saatiin nyt TOS:sta");
+        nykyjarjitem.relaatio.removeProp("Lähde");
+      }
+      delete nykyjarjestelmat[jarjestelma.id];  // löytyi jo, poistetaan, jotta nähdään, mitä ei enää ole
+    } else {
+      model.createRelationship("serving-relationship", "", jarjestelma, tehtluokkaitem.elem);
+      muuttunutMerkinta(jarjestelma, tehtluokkaitem.elem, aikaleima);
+      console.log("- Lisättiin tehtäväluokalle " + tehtluokkaitem.elem.name + " yhteys tietojärjestelmään " + jarjestelma.name);
+    }
+  }
+  for (var jarjid in nykyjarjestelmat) {  // käydään läpi jäljelle jääneet nykyiset, joita ei tullut TOS:sta
+    if (nykyjarjestelmat[jarjid].relaatio.prop("Lähde")) {
+      // console.log("- Säilytetään tehtäväluokan " + tehtluokkaitem.elem.name + " yhteys tietojärjestelmään " + nykyjarjestelmat[jarjid].jarjestelma.name + ", jota ei saatu TOS:sta, mutta jonka lähde on \"" + nykyjarjestelmat[jarjid].relaatio.prop("Lähde") + "\"");
+    } else {
+      console.log("- Poistetaan tehtäväluokalta " + tehtluokkaitem.elem.name + " yhteys tietojärjestelmään " + nykyjarjestelmat[jarjid].jarjestelma.name);
+      var rel = nykyjarjestelmat[jarjid].relaatio;
+      muuttunutMerkinta(rel.source, rel.target, aikaleima);
+      rel.delete();
+      console.log("  - poistettu");
+    }
+  }
+
+}
+
 
 model.prop("Päivitetty Tiedonohjaussuunnitelmasta", uusinmuutos.format("isoDateTime"));
 var asiakirjanMetadataNimet = [];
