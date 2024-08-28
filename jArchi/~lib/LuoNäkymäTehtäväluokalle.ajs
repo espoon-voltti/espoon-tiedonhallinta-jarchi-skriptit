@@ -67,12 +67,15 @@ function luoNakymaTehtavaluokalle(element) {
   }
 
   //console.log("Lisätään tietovarannot...");
-  var tietovarannot = $("#" + element.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" }));
-  tietovarannot.sort(namecompare);
-  var varantonum = Math.ceil(tietovarannot.size() / 2);
+  var varannotjajarj = $("#" + element.id).inRels("serving-relationship").sourceEnds("product").filter(fthHaving({ "_Tietovaranto": "1" }));
+  varannotjajarj.sort(namecompare);
+  var tietojarjestelmat = $("#" + element.id).inRels("serving-relationship").sourceEnds("application-component").filter(fth);
+  tietojarjestelmat.sort(namecompare);
+  varannotjajarj.add(tietojarjestelmat);
+  var varantonum = Math.ceil(varannotjajarj.size() / 2);
   var varantokorkeus = varantonum * (kuvionkorkeus + kuviovaliy) - kuviovaliy;
   varantokorkeus = Math.max(varantokorkeus, 2 * kuvionkorkeus); // vähän extra tilaa itse prosessille
-  //console.log("tietovarannot.size() = " + tietovarannot.size() + ", varantonum = " + varantonum + ", varantokorkeus = " + varantokorkeus);
+  //console.log("varannotjajarj.size() = " + varannotjajarj.size() + ", varantonum = " + varantonum + ", varantokorkeus = " + varantokorkeus);
   // lisätään käsillä oleva prosessi keskelle
   var tehtluokkaObj = recycledViewAddElement(viewObj, element, keskitax(1, 1), keskitay(juoksevay, varantokorkeus, 1, 1), kuvionleveys, kuvionkorkeus);
   if (ylaluokkaObj) {
@@ -81,12 +84,12 @@ function luoNakymaTehtavaluokalle(element) {
   }
 
   var i = 0;
-  tietovarannot.each(function (varanto) {
+  varannotjajarj.each(function (elem) {
     var y = keskitay(juoksevay, varantokorkeus, (i % varantonum) + 1, varantonum);
     //console.log("juoksevay = " + juoksevay + ", i = " + i + ", varantonum = " + varantonum + ", y = " + y);
-    var varantoObj = recycledViewAddElement(viewObj, varanto, i < varantonum ? reunusx : kokoleveys - reunusx - kuvionleveys, y, kuvionleveys, kuvionkorkeus);
-    var relaatio = $("#" + element.id).inRels("serving-relationship").filter(function (rel) { return rel.source.id == varanto.id; }).first();
-    recycledViewAddRelationship(viewObj, relaatio, varantoObj, tehtluokkaObj);
+    var tvtjObj = recycledViewAddElement(viewObj, elem, i < varantonum ? reunusx : kokoleveys - reunusx - kuvionleveys, y, kuvionleveys, kuvionkorkeus);
+    var relaatio = $("#" + element.id).inRels("serving-relationship").filter(function (rel) { return rel.source.id == elem.id; }).first();
+    recycledViewAddRelationship(viewObj, relaatio, tvtjObj, tehtluokkaObj);
     i++;
   });
 

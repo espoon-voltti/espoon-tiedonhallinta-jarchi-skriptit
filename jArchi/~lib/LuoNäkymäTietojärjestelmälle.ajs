@@ -243,6 +243,27 @@ function luoNakymaTietojarjestelmalle(element) {
       }
     });
     if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
+    juoksevay += notekorkeus + kuviovaliy;
+  }
+    
+  var tehtavaluokat = $("#" + element.id).outRels("serving-relationship").targetEnds("business-function").filter(fth);
+  tehtavaluokat.sort(tunnistecompare);
+  if (tehtavaluokat.size() > 0) {
+    var note = createRecycledObject(viewObj, "tehtavaluokat-note", "diagram-model-note", reunusx, juoksevay, noteleveys, notekorkeus);
+    note.setText("Tietojärjestelmään " + element.name + " liittyvät tehtäväluokat (" + tehtavaluokat.size() + " kpl):");
+    juoksevay += notekorkeus + kuviovaliy;
+
+    rivillakpl = Math.min(kuvioitamaxrivi, tehtavaluokat.size());
+    nykyx = 1;
+    tehtavaluokat.each(function (elem) {
+      var aliprosObj = recycledViewAddElement(viewObj, elem, keskitax(nykyx, rivillakpl), juoksevay, kuvionleveys, kuvionkorkeus);
+      nykyx++;
+      if (nykyx > rivillakpl) {
+        nykyx = 1;
+        juoksevay += kuvionkorkeus + kuviovaliy;
+      }
+    });
+    if (nykyx > 1) juoksevay += kuvionkorkeus + kuviovaliy;
   }
   juoksevay += kuvionkorkeus + kuviovaliy;
 
