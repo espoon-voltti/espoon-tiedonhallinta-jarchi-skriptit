@@ -38,9 +38,13 @@ var elementtivalidoinnit = {
     tunnista: function (elem) { return elem.type == "application-component" && fth(elem); },
     tarkistukset: [
       etsiDuplikaatit("tietojärjestelmän nimi", function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return elem.name; }),
-      etsiDuplikaatit("tietojärjestelmän Järjestelmäsalkku-ID", function (elem) { return elem.prop("Järjestelmäsalkku-ID"); }),
+      etsiDuplikaatit("tietojärjestelmän Järjestelmäsalkku ID", function (elem) { return elem.prop("Järjestelmäsalkku ID"); }),
+      etsiDuplikaatit("tietojärjestelmän Tiedonhallintamalli ID", function (elem) { return elem.prop("Tiedonhallintamalli ID"); }),
       etsiDuplikaatit("_OmaNäkymä", function (elem) { return elem.prop("_OmaNäkymä"); }),
-      function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return tarkistaElementinOmistaja(elem); }
+      function (elem) { if (elem.prop("_JärjestelmäsalkunVapaateksti") != "1") return tarkistaElementinOmistaja(elem); },
+      function (elem) { if (!elem.prop("Järjestelmäsalkku ID") && !elem.prop("Tiedonhallintamalli ID") && !elem.prop("_JärjestelmäsalkunVapaateksti")) return "Tietojärjestelmällä ei ole asetettuna Järjestelmäsalkku ID eikä Tiedonhallintamalli ID"; },
+      function (elem) { if (elem.prop("Järjestelmäsalkku ID") && elem.prop("Tiedonhallintamalli ID")) return "Tietojärjestelmällä on asetettuna sekä Järjestelmäsalkku ID että Tiedonhallintamalli ID"; },
+      function (elem) { if (elem.prop("Tiedonhallintamalli ID")) { if (! /^TH(\d{3,})$/.exec(elem.prop("Tiedonhallintamalli ID"))) return "Virheellinen Tiedonhallintamalli ID: " + elem.prop("Tiedonhallintamalli ID"); } }
     ]
   },
   "Tehtäväluokka": {  // ylläpito TOJ:ssa
