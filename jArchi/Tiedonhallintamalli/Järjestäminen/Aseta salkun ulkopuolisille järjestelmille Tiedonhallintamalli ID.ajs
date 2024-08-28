@@ -1,0 +1,42 @@
+﻿/*
+ * Tämä skripti asettaa Tiedonhallintamalli ID -propertylle arvon niille tietojärjestelmille, joilta puuttuu Järjestelmäsalkku ID,
+ * eli järjestelmille, joita ei ole tuotu tietohallinnon IT-salkusta vaan on lisätty suoraan Archiin osaksi tiedonhallintamallia.
+ */
+
+"use strict"; 
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/date.format.js");
+
+console.show();
+console.clear();
+console.log(">>> Aloitetaan Tiedonhallintamalli ID -propertyjen tarkistaminen... ");
+
+var suurin = 100;
+console.log("> Etsitään suurin käytössä oleva arvo")
+$("application-component").filter(fth).each(function (tj) {
+  if (tj.prop("Tiedonhallintamalli ID")) {
+    var thidPattern = /^TH(\d{3,})$/;
+    var match = thidPattern.exec(tj.prop("Tiedonhallintamalli ID"));
+    if (match) {
+      suurin = parseInt(match[1]) > suurin ? parseInt(match[1]) : suurin;
+    } else {
+      console.error("Virheellinen Tiedonhallintamalli ID tietojärjestelmällä " + tj.name + ": " + tj.prop("Tiedonhallintamalli ID"));
+    }
+  }
+});
+console.log("- suurin on " + suurin);
+
+console.log("> Käydään läpi puuttuvat")
+$("application-component").filter(fth).each(function (tj) {
+  if (tj.prop("Järjestelmäsalkku ID")) return;  // on salkussa
+  if (tj.prop("Tiedonhallintamalli ID")) return;  // on jo
+  if (tj.prop("_JärjestelmäsalkunVapaateksti")) return;  // ei aseteta IT-salkun vapaatekstinä tulleille
+  suurin = suurin + 1;
+  var uusiid = "TH" + suurin;
+  tj.prop("Tiedonhallintamalli ID", uusiid);
+  console.log("- lisättiin tietojärjestelmälle " + tj.name + " Tiedonhallintamalli ID:ksi " + uusiid);
+});
+
+console.log("> Valmis");
+console.log("<<<");
+console.log("");
