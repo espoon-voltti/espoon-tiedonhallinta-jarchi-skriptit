@@ -4,7 +4,26 @@
 
 var sailytettavat = {
   "_KuvattavaKohde": 1,
-  "_OmaNäkymä": 1
+  "_OmaNäkymä": 1,
+  "_Tiedonhallintamalli": 1,
+  "_Päivitetty": 1,
+  "_Muuttunut": 1,
+  "_NimiPäivitetty": 1,
+  "_TunnistePäivitetty": 1,
+  "_PoistuneeksiMerkitty": 1,
+  "_VanhaTunniste": 1,
+  "_NäytäVainOmatSyötteet": 1,
+  "_ÄläNostaYhteyksiäYlös": 1,
+  "_ÄläPiirräAliprosessienYhteyksiä": 1,
+  "_Tietovaranto": 1,
+  "_JärjestelmäsalkunVapaateksti": 1,
+  "_Poistuneeksi merkitty": 1,
+  "_VanhaNimi": 1,
+  "_ArchissaLisätty": 1,
+  "_SortOrder": 1,
+  "_HTMLContent": 1,
+  "_JärjestelmäsalkkuURL": 1,
+  "_IMSURL": 1
 }
 
 "use strict";
