@@ -27,16 +27,18 @@ jarjestelmat.sort(namecompare);
 jarjestelmat.each(function (jarj) {
   if (jarj.prop("Virallinen") == "F") return; // ei listata selvitettäviä
   if (jarj.prop("_JärjestelmäsalkunVapaateksti") == "1") return; // ei salkun liittymien vapaatekstejä
-  if (jarj.prop("Järjestelmäsalkku ID") <= 0) return;
+  if (jarj.prop("Järjestelmäsalkku ID") && jarj.prop("Järjestelmäsalkku ID") < 0) return;
   if (jarj.prop("Elinkaaren vaihe") == "Poistettu") return;
   var datarow = {};
   var nimi = (jarj.prop("Julkinen nimi") && jarj.name != jarj.prop("Julkinen nimi") ? jarj.name + "-" + jarj.prop("Julkinen nimi") : jarj.name);
-  datarow["Tietojärjestelmä"] = nimi + " (" + jarj.prop("Järjestelmäsalkku ID") + ")";
+  var tunniste = jarj.prop("Järjestelmäsalkku ID") ? jarj.prop("Järjestelmäsalkku ID") : jarj.prop("Tiedonhallintamalli ID");
+  datarow["Tietojärjestelmä"] = nimi + " (" + tunniste + ")";
+  datarow["Tunniste"] = tunniste;
   console.log(datarow["Tietojärjestelmä"]);
   csvData.push(datarow);
 });
 
-var csvHeaders = ["Tietojärjestelmä"];
+var csvHeaders = ["Tietojärjestelmä", "Tunniste"];
 var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
 
 $.fs.writeFile(exportFile, theCSV);

@@ -6,21 +6,18 @@
 
 "use strict";
 console.show(); 
-console.log("> Tuotetaan listaus tietojärjestelmistä ja niiden tietovarannoista...");
+console.log("> Tuotetaan listaus tietojärjestelmistä ja niihin liittyvistä prosesseista...");
 
 load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
 load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
 console.log("> Loaded Papa Parse");
 
 //var viemyoskentat = ["Järjestelmäsalkku ID", "Avointen rajapintojen kuvaus", "Tietojen saatavuus avoimella rajapinnalla", "Kuvaileva nimi", "Kuvailevaksi nimeksi", "Virallinen", "_JärjestelmäsalkunVapaateksti", "_Lisätieto", "_NimiSalkussa", "_Vastuuhenkilö", "_Yhteyshenkilö", "Yhteyshenkilö"];
-
 //var viemyoskentat = ["Julkinen nimi", "Tietoaineistot", "Hakutekijät", "Tietojen saatavuus avoimella rajapinnalla", "Asiarekisteri", "Kriittisyys"];
 
-var viemyoskentat = ["Järjestelmäsalkku ID", "_OmaNäkymä", "Elinkaaren vaihe", "Julkinen nimi", "Järjestelmän omistaja", "Toimialan vastuuhenkilö"];
+var viemyoskentat = [ ];
 
-
-
-var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "tietojäjestelmät-varannot.csv" } );
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "tietojäjestelmät-prosessit.csv" } );
 if (!exportFile) {
   console.log("> Vienti peruttiin");
   exit();
@@ -33,10 +30,9 @@ var maxVarannot = 0;
 $("application-component").filter(fth).each(function (jarj) {
   if (jarj.prop("Virallinen") == "F") return; // ei listata selvitettäviä
   if (jarj.prop("_JärjestelmäsalkunVapaateksti") == "1") return; // ei salkun liittymien vapaatekstejä
-  var varannot = $("#"+jarj.id).outRels("serving-relationship").targetEnds("product").filter(fth).filter(function (varanto) 
-    { return !(varanto.prop("Virallinen") == "F"); });
-  varannot.sort(namecompare);
-  if (varannot.size() > maxVarannot) maxVarannot = varannot.size();
+  var prosessit = $("#" + jarj.id).outRels("serving-relationship").targetEnds("business-process").filter(fth);
+  prosessit.sort(tunnistecompare);
+  if (prosessit.size() > maxVarannot) maxVarannot = prosessit.size();
   var toimiala = "Muut";
   var omistaja = $("#"+jarj.id).inRels("association-relationship.vastaa").sourceEnds("business-actor").filter(fth).first();
   if (omistaja) {
@@ -50,12 +46,18 @@ $("application-component").filter(fth).each(function (jarj) {
   datarow["Omistaja"] = omistaja ? omistaja.name : "EI OMISTAJAA";
   datarow["Pääjärjestelmä"] = paajarj ? paajarj.name : "";
   datarow["Tietojärjestelmä"] = jarj.name;
-  datarow["Archi-ID"] = jarj.id;
-  datarow["Kuvaus"] = jarj.documentation;
+  datarow["Julkinen nimi"] = jarj.prop("Julkinen nimi");
+
+  //datarow["Archi-ID"] = jarj.id;
+  //datarow["Kuvaus"] = jarj.documentation;
+  var prosessit_txt = "";
   var i = 1;
-  varannot.each(function (varanto) {
-    datarow["Tietovaranto " + i++] = varanto.name;
+  prosessit.each(function (prosessi) {
+    if (i > 1) prosessit_txt += "\n";
+    prosessit_txt += prosessi.name;
+    i++;
   });
+  datarow["Prosessit"] = prosessit_txt;
 
   for (var i = 0; i < viemyoskentat.length; i++) {
     datarow[viemyoskentat[i]] = jarj.prop(viemyoskentat[i]);
@@ -68,13 +70,9 @@ var csvHeaders = [
     "Omistaja",
     "Pääjärjestelmä",
     "Tietojärjestelmä",
-    "Archi-ID",
-    "Kuvaus"
+    "Julkinen nimi",
+    "Prosessit"
 ];
-
-for (var i = 0; i < maxVarannot; i++) {
-  csvHeaders.push("Tietovaranto " + (i + 1));
-}
 for (var i = 0; i < viemyoskentat.length; i++) {
   csvHeaders.push(viemyoskentat[i]);
 }

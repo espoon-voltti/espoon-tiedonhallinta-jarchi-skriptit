@@ -1,0 +1,59 @@
+﻿/*
+ * New Archi Script
+ */
+
+"use strict";
+
+console.show();
+console.clear();
+
+console.log("> Tietovarantojen listaus");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+var viemyoskentat = [ ];
+
+// var viemyoskentat = ["Koskee asianhallintaa", "Koskee palvelua", "Omistaja", "Omistuksen lisätieto", "_VanhaTunniste", "_TunnistePäivitetty", "_NimiPäivitetty", "_Poistuneeksi merkitty"];
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "tietovarannot.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+var csvData = [];
+
+var varannot = $("folder.Business").children("folder.Tiedonhallintamalli").children("folder.Tietovarannot").find("product"); //.filter(fthHaving({ "_Tietovaranto": "1" }));
+varannot.sort(namecompare);
+varannot.each(function (varanto) {
+  console.log(varanto);
+  var datarow = {};
+  var kansio = $("#" + varanto.id).parent().first();
+  datarow["Kansio"] = kansio ? kansio.name : "";
+  datarow["Tietovaranto"] = varanto.name;
+  datarow["Kuvaus"] = varanto.documentation;
+  for (var i = 0; i < viemyoskentat.length; i++) {
+    datarow[viemyoskentat[i]] = varanto.prop(viemyoskentat[i]);
+  }
+  csvData.push(datarow);
+});
+
+var csvHeaders = [];
+csvHeaders.push("Kansio");
+csvHeaders.push("Tietovaranto");
+csvHeaders.push("Kuvaus");
+for (var i = 0; i < viemyoskentat.length; i++) {
+  csvHeaders.push(viemyoskentat[i]);
+}
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+console.log("> Valmis");
+console.log();
+

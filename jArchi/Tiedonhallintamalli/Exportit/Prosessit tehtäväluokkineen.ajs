@@ -1,0 +1,71 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.show();
+
+console.log("> Listataan prosessit tehtäväluokkineen");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function kasitteleProsessit(_prosessit, _taso, _tulostusfunktio) {
+  _prosessit.each(function (_pros) {
+    _tulostusfunktio(_pros, _taso);
+    _aliprosessit = $("#"+_pros.id).inRels("specialization-relationship").sourceEnds("business-process");
+    if (_aliprosessit.size()) {
+      _aliprosessit.sort(tunnistecompare);
+      kasitteleProsessit(_aliprosessit, _taso + 1, _tulostusfunktio);
+    }
+  });
+}
+
+prosessimap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("business-process").filter(fth).each(function (pros) {
+  prosessimap[pros.id] = pros;
+});
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "prosessit_tehtavaluokkineen.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+csvData = [];
+
+prosessit = $("folder.Business").children("folder.Tiedonhallintamalli").children("folder.Prosessihierarkia").children("business-process");
+prosessit.sort(tunnistecompare);
+var kasittelyfunktio = function (pros, taso) {
+  datarow = {};
+  datarow["Tunniste"] = pros.prop("Tunniste");
+  datarow["Nimi"] = pros.name;
+  datarow["Taso"] = taso;
+  var tehtavaluokat = "";
+  var tehtluokat = $("#" + pros.id).outRels("serving-relationship").targetEnds("business-function").filter(fth);
+  tehtluokat.sort(tunnistecompare);
+  tehtluokat.each(function (elem) {
+    tehtavaluokat += (tehtavaluokat ? "\r\n" : "") + elem.name;
+  });
+  datarow["Tehtäväluokat"] = tehtavaluokat;
+  csvData.push(datarow);
+  delete prosessimap[pros.id];
+};
+
+kasitteleProsessit(prosessit, 1, kasittelyfunktio);
+console.log("> Listataan orvot prosessit (taso = 0)");
+for (prosid in prosessimap) {
+  console.log("- " + prosessimap[prosid].name);
+  kasittelyfunktio(prosessimap[prosid], 0);
+}
+
+var csvHeaders = ["Tunniste", "Nimi", "Taso", "Tehtäväluokat"];
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+
+console.log("> Valmis");
+console.log();

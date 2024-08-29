@@ -1,0 +1,62 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.show();
+
+console.log("> Listataan tehtäväluokat prosesseineen");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function kasitteleTehtluokat(_tehtluokat, _taso, _tulostusfunktio) {
+  _tehtluokat.each(function (_tl) {
+    _tulostusfunktio(_tl, _taso);
+    _alitehtluokat = $("#" + _tl.id).inRels("specialization-relationship").sourceEnds("business-function").filter(fth);
+    if (_alitehtluokat.size()) {
+      _alitehtluokat.sort(tunnistecompare);
+      kasitteleTehtluokat(_alitehtluokat, _taso + 1, _tulostusfunktio);
+    }
+  });
+}
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: ["*.csv"], fileName: "tehtavaluokat_prosesseineen.csv" });
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+csvData = [];
+
+tehtluokat = $("folder.Business").children("folder.Tiedonhallintamalli").children("folder.Tehtäväluokat").children("business-function").filter(fth);
+tehtluokat.sort(tunnistecompare);
+
+var kasittelyfunktio = function (tl, taso) {
+  datarow = {};
+  datarow["Tunniste"] = tl.prop("Tunniste");
+  datarow["Nimi"] = tl.name;
+  datarow["Taso"] = taso;
+  //datarow["Kuvaus"] = tl.documentation;
+  var prosessilista = "";
+  var prosessit = $("#" + tl.id).inRels("serving-relationship").sourceEnds("business-process").filter(fth);
+  prosessit.sort(tunnistecompare);
+  prosessit.each(function (pros) {
+    prosessilista += (prosessilista ? "\r\n" : "") + pros.name;
+  });
+  datarow["Prosessit"] = prosessilista;
+  csvData.push(datarow);
+};
+
+kasitteleTehtluokat(tehtluokat, 1, kasittelyfunktio);
+
+var csvHeaders = ["Tunniste", "Nimi", "Taso", "Kuvaus", "Prosessit"];
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+
+console.log("> Valmis");
+console.log();

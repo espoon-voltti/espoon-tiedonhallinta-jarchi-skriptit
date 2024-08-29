@@ -1,0 +1,78 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.show();
+
+console.log("> Organisaatioiden listaus");
+load(__SCRIPTS_DIR__ + "~lib/Yhteiset apufunktiot.ajs");
+load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
+console.log("> Loaded Papa Parse");
+
+function kasitteleOrgt(_orgs, _taso, _tulostusfunktio) {
+  _orgs.each(function (_org) {
+    _tulostusfunktio(_org, _taso);
+    _aliorgs = $("#"+_org.id).outRels("aggregation-relationship").targetEnds("business-actor").filter(fth);
+    if (_aliorgs.size()) {
+      _aliorgs.sort(namecompare);
+      kasitteleOrgt(_aliorgs, _taso + 1, _tulostusfunktio);
+    }
+  });
+}
+
+orgmap = {};  // käytetään etsimään hierarkian ulkopuolelle jääviä
+$("business-actor").filter(fth).each(function (org) {
+  orgmap[org.id] = org;
+});
+
+var exportFile = window.promptSaveFile({ title: "Export to CSV", filterExtensions: [ "*.csv" ], fileName: "organisaatiot.csv" } );
+if (!exportFile) {
+  console.log("> Vienti peruttiin");
+  exit();
+}
+
+console.log("> Tallennetaan CSV");
+
+csvData = [];
+maxTaso = 0;
+
+toimialat = $("business-actor").filter(fthHaving({ "Tyyppi": "Toimialataso" }));
+toimialat.sort(namecompare);
+kasitteleOrgt(toimialat, 1, function (org, taso) {
+  valit = "";
+  for (i = 1; i < taso; i++) valit += "  ";
+  console.log(valit + org.name);
+  
+  if (taso > maxTaso) maxTaso = taso;
+  datarow = {};
+  datarow["Taso " + taso] = org.name;
+  datarow["Tyyppi"] = org.prop("Tyyppi");
+  csvData.push(datarow);
+  delete orgmap[org.id];
+});
+
+console.log("> Luetellaan orvot organisaatiot");
+for (orgid in orgmap) {
+  if (maxTaso < 2) maxTaso = 2;
+  datarow = {};
+  datarow["Taso 1"] = orgmap[orgid].name;
+  datarow["Taso 2"] = orgmap[orgid].prop("Sisäinen/ulkoinen");
+  datarow["Tyyppi"] = orgmap[orgid].prop("Tyyppi");
+  csvData.push(datarow);
+  console.log("- " + orgmap[orgid].name + " " + orgmap[orgid].prop("Sisäinen/ulkoinen"));
+}
+
+csvHeaders = [];
+for (i = 1; i <= maxTaso; i++) {
+  csvHeaders.push("Taso " + i);
+}
+csvHeaders.push("Tyyppi");
+
+var theCSV = Papa.unparse({fields:csvHeaders, data:csvData});
+$.fs.writeFile(exportFile, theCSV);
+
+console.log("> CSV tallennettu");
+
+console.log("> Valmis");
+console.log();
+

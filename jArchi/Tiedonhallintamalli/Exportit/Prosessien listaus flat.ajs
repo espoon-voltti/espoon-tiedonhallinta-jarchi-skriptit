@@ -13,6 +13,9 @@ load(__SCRIPTS_DIR__ + "~lib/papaparse.min.js");
 console.log("> Loaded Papa Parse");
 
 var viemyoskentat = [
+  "_TunnistePäivitetty",
+  "_VanhaTunniste",
+  "_PoistuneeksiMerkitty",
   "Koskee asianhallintaa",
   "Prosessissa syntyvä lopputuotos",
   "Saa syötteitä",
