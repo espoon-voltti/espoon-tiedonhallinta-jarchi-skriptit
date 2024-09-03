@@ -107,7 +107,7 @@ var relaatiovalidoinnit = {
   },
   "Tietojärjestelmä palvelee tehtäväluokkaa": {  // ylläpito TOJ:ssa
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tehtäväluokka"; },
-    tarkistukset: [relaatioduplikaatit, tulosta]
+    tarkistukset: [relaatioduplikaatit]
   },
   "Tietojärjestelmä palvelee tietovarantoa": {  // YLLÄPITO ARCHISSA
     tunnista: function (rel) { return rel.type == "serving-relationship" && tunnistaElementti(rel.source) == "Tietojärjestelmä" && tunnistaElementti(rel.target) == "Tietovaranto"; },
