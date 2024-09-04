@@ -291,7 +291,7 @@ function luoKerrosnakymaOrganisaatiolle(org) {
           if (!(rel.target.id in muidenProsessitMap)) return;
         } else if (rel.target.type == "product") {
           if (!(rel.target.id in muidenProsJarjTietovarannotMap)) return;
-        }
+        } else return; // ei käsitellä muita kuin prosessit ja tietovarannot (mm. ei käsitellä tehtäväluokkia)
         //console.log("Piiretään relaatiota(4) " + kuvaileRelaatio(rel));
         recycledViewAddRelationship(viewObj, rel, objektit[jarj.id], objektit[rel.target.id]);
       });
@@ -301,6 +301,7 @@ function luoKerrosnakymaOrganisaatiolle(org) {
 
   recycledViewFinishRecycling(viewObj);
   varitaNakyma(nakyma);
+  
 }
 
 
