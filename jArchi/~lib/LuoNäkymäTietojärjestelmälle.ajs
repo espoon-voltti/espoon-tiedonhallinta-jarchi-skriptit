@@ -126,7 +126,7 @@ function luoNakymaTietojarjestelmalle(element) {
   var outputliittymat = liittymientiedot(outputjarjestelmat);
 
   var liittymakorkeus = Math.max(inputliittymat.korkeus, outputliittymat.korkeus);
-  console.log("inputliittymat.korkeus = " + inputliittymat.korkeus + ", outputliittymat.korkeus = " + outputliittymat.korkeus + ", liittymakorkeus = " + liittymakorkeus);
+  //console.log("inputliittymat.korkeus = " + inputliittymat.korkeus + ", outputliittymat.korkeus = " + outputliittymat.korkeus + ", liittymakorkeus = " + liittymakorkeus);
   liittymakorkeus = Math.max(liittymakorkeus, 2 * kuvionkorkeus); // vähän extra tilaa itse kuvattavalle järjestelmälle, jos ei ole liittymiä
 
   // lisätään käsillä oleva järjestelmä keskelle
@@ -145,7 +145,7 @@ function luoNakymaTietojarjestelmalle(element) {
   var paljon_liittymia = false;
   var juoksevay_input = juoksevay + Math.round((liittymakorkeus - inputliittymat.korkeus) / 2);
   inputliittymat.jarjestelmat.forEach(function (jarjtiedot) {
-    console.log(jarjtiedot.jarjestelma);
+    //console.log(jarjtiedot.jarjestelma);
     /*** BEGIN vapaatekstien metsästys */
     if (jarjtiedot.varsinaiset.length) {
       var varsinaisObj = recycledViewAddElement(viewObj, jarjtiedot.varsinaiset[0], reunusx, juoksevay_input, kuvionleveys, kuvionkorkeus);
@@ -155,21 +155,21 @@ function luoNakymaTietojarjestelmalle(element) {
     var inputObj = recycledViewAddElement(viewObj, jarjtiedot.jarjestelma, reunusx, juoksevay_input + Math.round((jarjtiedot.korkeus - kuvionkorkeus - kuviovaliy) / 2), kuvionleveys, kuvionkorkeus);
     juoksevay_input += jarjtiedot.korkeus;
     jarjtiedot.liittymat.forEach(function (liittyma) {
-      console.log("-> " + liittyma);
+      //console.log("-> " + liittyma);
       recycledViewAddRelationship(viewObj, liittyma, inputObj, jarjestelmaObj);
     });
     if (jarjtiedot.liittymat.length > 2) paljon_liittymia = true;
     /*** BEGIN vapaatekstien metsästys */
     if (jarjtiedot.varsinaiset.length) {
       var relaatio = $("#" + jarjtiedot.jarjestelma.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == jarjtiedot.varsinaiset[0].id; }).first();
-      console.log("*> " + relaatio);
+      //console.log("*> " + relaatio);
       recycledViewAddRelationship(viewObj, relaatio, varsinaisObj, inputObj);
     }
     /*** END vapaatekstien metsästys */
   });
   var juoksevay_output = juoksevay + Math.round((liittymakorkeus - outputliittymat.korkeus) / 2);
   outputliittymat.jarjestelmat.forEach(function (jarjtiedot) {
-    console.log(jarjtiedot.jarjestelma);
+    //console.log(jarjtiedot.jarjestelma);
     /*** BEGIN vapaatekstien metsästys */
     if (jarjtiedot.varsinaiset.length) {
       var varsinaisObj = recycledViewAddElement(viewObj, jarjtiedot.varsinaiset[0], kokoleveys - reunusx - kuvionleveys, juoksevay_output, kuvionleveys, kuvionkorkeus);
@@ -179,7 +179,7 @@ function luoNakymaTietojarjestelmalle(element) {
     var outputObj = recycledViewAddElement(viewObj, jarjtiedot.jarjestelma, kokoleveys - reunusx - kuvionleveys, juoksevay_output + Math.round((jarjtiedot.korkeus - kuvionkorkeus - kuviovaliy) / 2), kuvionleveys, kuvionkorkeus);
     juoksevay_output += jarjtiedot.korkeus;
     jarjtiedot.liittymat.forEach(function (liittyma) {
-      console.log("<- " + liittyma);
+      //console.log("<- " + liittyma);
       if (liittyma.target.id == jarjtiedot.jarjestelma.id) {
         //console.log("    (T) " + liittyma.source + " -> " + liittyma.target + "; " + jarjestelmaObj + " > " + outputObj);
         recycledViewAddRelationship(viewObj, liittyma, jarjestelmaObj, outputObj);
@@ -193,7 +193,7 @@ function luoNakymaTietojarjestelmalle(element) {
     /*** BEGIN vapaatekstien metsästys */
     if (jarjtiedot.varsinaiset.length) {
       var relaatio = $("#" + jarjtiedot.jarjestelma.id).inRels("realization-relationship").filter(function (rel) { return rel.source.id == jarjtiedot.varsinaiset[0].id; }).first();
-      console.log("<* " + relaatio);
+      //console.log("<* " + relaatio);
       recycledViewAddRelationship(viewObj, relaatio, varsinaisObj, outputObj);
     }
     /*** END vapaatekstien metsästys */
