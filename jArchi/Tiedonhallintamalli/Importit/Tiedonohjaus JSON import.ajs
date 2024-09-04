@@ -128,9 +128,13 @@ function onkoKohteenTilaOhitettava(kohde, kohteentyyppi = "tuntematon") {
 }
 
 function parsiPvm(pvm) {
-  var pvmPattern = /(\d+)\.(\d+)\.(\d+)\s(\d+):(\d+):(\d+)/g;
-  var match = pvmPattern.exec(pvm);
-  return match ? new Date(match[3], match[2] - 1, match[1], match[4], match[5], match[6], 0) : null;
+  var pvmPattern1 = /(\d+)\.(\d+)\.(\d+)\s(\d+):(\d+):(\d+)/g;
+  var match = pvmPattern1.exec(pvm);
+  if (match) return new Date(match[3], match[2] - 1, match[1], match[4], match[5], match[6], 0);
+  var pvmPattern2 = /(\d+)-(\d+)-(\d+)\s(\d+):(\d+):(\d+)/g;
+  var match = pvmPattern2.exec(pvm);
+  if (match) return new Date(match[1], match[2] - 1, match[3], match[4], match[5], match[6], 0);
+  return null;
 }
 
 console.show();
